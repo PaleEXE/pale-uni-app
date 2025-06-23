@@ -1,0 +1,43 @@
+select {
+    padding-right: 1rem;
+}
+
+select option {
+    padding-right: 300px;
+}
+
+.custom-scrollbar {
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+/* Scrollbar width */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+/* Track */
+.custom-scrollbar::-webkit-scrollbar-track {
+    background-color: #f0f0f0;
+    border-radius: 10px;
+}
+
+/* Thumb */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #3b82f6; /* Tailwind blue-500 hex */
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+/* Thumb hover */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #2563eb; /* Tailwind blue-600 hex */
+}
+
+/* Firefox */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 #f0f0f0;
+}
