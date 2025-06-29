@@ -1,6 +1,9 @@
 export const topics = [
     { title: 'Knowledge Representation', subtopics: ['Logic Evaluator'] },
-    { title: 'Data Mining & Clustering', subtopics: [] },
+    {
+        title: 'Data Mining & Clustering',
+        subtopics: [],
+    },
     { title: 'I D K', subtopics: [] },
 ];
 

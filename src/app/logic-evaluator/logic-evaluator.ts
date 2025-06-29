@@ -19,7 +19,7 @@ import { RouterLink } from '@angular/router';
 export class LogicEvaluator {
     private platformId = inject(PLATFORM_ID);
     lastExp: string = '';
-    data: WritableSignal<number[][]> = signal([]);
+    data: WritableSignal<number[][]> = signal([]); 
     headers: WritableSignal<string[]> = signal([]);
     errMsg: WritableSignal<string> = signal('');
 
