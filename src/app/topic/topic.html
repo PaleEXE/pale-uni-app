@@ -1,18 +1,16 @@
 <div class="flex flex-col items-center justify-center gap-12 text-center m-16">
-    <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
+  <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
 
-    <div class="flex flex-wrap justify-center gap-6 text-white">
-        @for (sub of subTopics; track $index) {
-        <button
-            [routerLink]="['/topic', topicId, getSlugify(sub)]"
-            class="big-button"
-        >
-            <h3 class="font-bold">{{ sub }}</h3>
-        </button>
-        }
-    </div>
-
-    <button [routerLink]="['/']" class="pale-button">
-        Back to Home
+  <div class="flex flex-wrap justify-center gap-6 text-white">
+    @for (sub of subTopics; track $index) {
+    <button
+      [routerLink]="['/topic', topicId, getSlugify(sub)]"
+      class="big-button"
+    >
+      <h3 class="font-bold">{{ sub }}</h3>
     </button>
+    }
+  </div>
+
+  <button [routerLink]="['/']" class="pale-button">Back to Home</button>
 </div>
