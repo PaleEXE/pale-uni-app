@@ -1,59 +1,37 @@
-# PaleUniApp
+# 🌌 PaleUniApp - AI Algorithm Visualization Platform
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.0.0.
+![PaleUniApp Banner](gh_imgs/Home.png)
 
-## Development server
+A stunning visual playground for exploring AI algorithms through interactive visualizations. PaleUniApp transforms complex AI concepts into beautiful, intuitive experiences.
 
-To start a local development server, run:
+## ✨ Features
 
-```bash
-ng serve
-```
+- � **Interactive Truth Tables** - Visualize logical operations
+- 🌠 **Cluster Visualizations** - Watch algorithms group data in real-time
+- 🌀 **Neural Network Animations** - See how information flows through layers
+- � **Algorithm Playground** - Experiment with different parameters
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 🖼️ Gallery
 
-## Code scaffolding
+| Truth Table Visualizer         | Cluster Visualization           |
+| ------------------------------ | ------------------------------- |
+| ![Truth Table](gh_imgs/TT.png) | ![Cluster](gh_imgs/Cluster.png) |
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## 🚀 Quick Start
 
-```bash
-ng generate component component-name
-```
+1. Clone the repository:
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+   ```bash
+   git clone https://github.com/PaleEXE/pale-uni-app.git
+   ```
 
-```bash
-ng generate --help
-```
+2. Install dependencies:
 
-## Building
+   ```bash
+   npm install
+   ```
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+3. Start the development server:
+   ```bash
+   uvicorn main:app --reload
+   ```
