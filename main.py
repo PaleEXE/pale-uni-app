@@ -4,7 +4,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
+import numpy as np
 
 from PLogic import PExp
 
@@ -30,6 +31,7 @@ class ExpressionRequest(BaseModel):
 class ClusterRequest(BaseModel):
     points: List[Tuple[float, float]]
     k: int
+    algorithm: str
 
 
 @app.post("/evaluate")
@@ -50,18 +52,66 @@ async def evaluate(inp: ExpressionRequest):
 
 @app.post("/cluster")
 async def cluster(inp: ClusterRequest):
-    points = inp.points  # List of (x, y) tuples
+    try:
+        points = np.array(inp.points)  # Convert to numpy array
 
-    if not points:
-        return {"error": "No points provided."}
+        if len(points) == 0:
+            raise HTTPException(status_code=400, detail="No points provided.")
 
-    model = KMeans(n_clusters=inp.k, n_init="auto")
-    model.fit(points)
+        if inp.algorithm == "kmeans":
+            if inp.k <= 0:
+                raise HTTPException(
+                    status_code=400, detail="k must be a positive integer."
+                )
 
-    labels = model.labels_.tolist()
-    centroids = model.cluster_centers_.tolist()
+            model = KMeans(n_clusters=inp.k, n_init="auto")
+            model.fit(points)
+            centroids = model.cluster_centers_.tolist()
+            labels = model.labels_.tolist()
 
-    return {"labels": labels, "centroids": centroids}
+        elif inp.algorithm == "Agglomerative":
+            if inp.k <= 0:
+                raise HTTPException(
+                    status_code=400, detail="k must be a positive integer."
+                )
+
+            model = AgglomerativeClustering(n_clusters=inp.k)
+            labels = model.fit_predict(points).tolist()
+            # Calculate centroids manually for AgglomerativeClustering
+            centroids = []
+            for cluster_id in set(labels):
+                cluster_points = points[np.array(labels) == cluster_id]
+                centroids.append(cluster_points.mean(axis=0).tolist())
+
+        elif inp.algorithm == "DBSCAN":
+            # For DBSCAN, 'k' is used as 'eps' parameter
+            model = DBSCAN(eps=inp.k, min_samples=2)
+            labels = model.fit_predict(points).tolist()
+            # DBSCAN doesn't have centroids, but we can calculate cluster means
+            centroids = []
+            unique_labels = set(labels)
+            if -1 in unique_labels:  # -1 is noise in DBSCAN
+                unique_labels.remove(-1)
+            for cluster_id in unique_labels:
+                cluster_points = points[np.array(labels) == cluster_id]
+                centroids.append(cluster_points.mean(axis=0).tolist())
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid clustering algorithm specified. Choose from: kmeans, Agglomerative, DBSCAN",
+            )
+
+        return {
+            "labels": labels,
+            "centroids": centroids,
+            "algorithm": inp.algorithm,
+            "num_clusters": len(set(labels)) if labels else 0,
+        }
+
+    except Exception as e:
+        logger.error(f"Clustering error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Clustering failed: {str(e)}")
 
 
 app.mount("/", StaticFiles(directory="dist/browser", html=True), name="static")

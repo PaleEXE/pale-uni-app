@@ -4,34 +4,87 @@
   </div>
   <div class="flex">
     <div class="flex flex-col gap-6 m-6">
-      <label for="clusterCount" class="font-medium mb-2"
-        >Number of Clusters:</label
+      <select
+        id="algorithm"
+        class="w-48 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
+        [(ngModel)]="selectedAlgorithm"
+        (change)="onAlgorithmChange($event)"
       >
-      <div class="flex items-center space-x-2">
-        <input
-          id="clusterCount"
-          type="number"
-          min="1"
-          [value]="clusterCount"
-          (input)="clusterCount = $any($event.target).valueAsNumber || 1"
-          class="w-20 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
-        />
-        <button
-          (click)="clusterCount = clusterCount ? clusterCount - 1 : 1"
-          class="pale-button text-white px-3 py-1 rounded"
-        >
-          &minus;
-        </button>
-        <button
-          (click)="clusterCount = clusterCount + 1"
-          class="pale-button text-white px-3 py-1 rounded"
-        >
-          &plus;
-        </button>
+        <option value="kmeans">K-Means</option>
+        <option value="Agglomerative">Agglomerative</option>
+        <option value="DBSCAN">DBSCAN</option>
+      </select>
+
+      <!-- K-Means/Agglomerative Controls -->
+      <div *ngIf="selectedAlgorithm !== 'DBSCAN'">
+        <label for="clusterCount" class="font-medium mb-2">Number of Clusters:</label>
+        <div class="flex items-center space-x-2">
+          <input
+            id="clusterCount"
+            type="number"
+            min="1"
+            [(ngModel)]="clusterCount"
+            class="w-20 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
+          />
+          <button
+            (click)="clusterCount = clusterCount > 1 ? clusterCount - 1 : 1"
+            class="pale-button text-white px-3 py-1 rounded"
+          >
+            &minus;
+          </button>
+          <button
+            (click)="clusterCount = clusterCount + 1"
+            class="pale-button text-white px-3 py-1 rounded"
+          >
+            &plus;
+          </button>
+        </div>
       </div>
+
+      <!-- DBSCAN Controls -->
+      <div *ngIf="selectedAlgorithm === 'DBSCAN'" class="space-y-4">
+        <div>
+          <label for="eps" class="font-medium mb-2">Epsilon (eps):</label>
+          <input
+            id="eps"
+            type="number"
+            min="0.1"
+            step="0.1"
+            [(ngModel)]="eps"
+            class="w-full px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
+          />
+        </div>
+        
+        <div>
+          <label for="minSamples" class="font-medium mb-2">Minimum Samples:</label>
+          <div class="flex items-center space-x-2">
+            <input
+              id="minSamples"
+              type="number"
+              min="1"
+              [(ngModel)]="minSamples"
+              class="w-20 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
+            />
+            <button
+              (click)="minSamples = minSamples > 1 ? minSamples - 1 : 1"
+              class="pale-button text-white px-3 py-1 rounded"
+            >
+              &minus;
+            </button>
+            <button
+              (click)="minSamples = minSamples + 1"
+              class="pale-button text-white px-3 py-1 rounded"
+            >
+              &plus;
+            </button>
+          </div>
+        </div>
+      </div>
+
       <button class="pale-button h-12" (click)="onClustering()">Cluster</button>
       <button class="pale-button h-12" (click)="onReset()">Reset</button>
     </div>
+    
     <div
       #plotArea
       class="relative w-142 h-142 border-2 border-primary-500 rounded-lg z-10"
@@ -55,9 +108,12 @@
         [style.top.px]="getPosY(p)"
         [ngClass]="getColor($index)"
       ></div>
-      } @for (c of centroids(); track $index) {
+      }
+      
+      <!-- Centroids -->
+      @for (c of centroids(); track $index) {
       <div
-        class="centroid absolute size-[15px] rounded-full"
+        class="centroid absolute size-[15px] rounded-full border-2 border-white"
         [style.left.px]="getPosX(c)"
         [style.top.px]="getPosY(c)"
         [ngClass]="getCentroidColor($index)"
