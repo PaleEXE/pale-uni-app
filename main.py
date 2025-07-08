@@ -1,8 +1,10 @@
 import logging
+from typing import List, Tuple
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from sklearn.cluster import KMeans
 
 from PLogic import PExp
 
@@ -14,13 +16,20 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 class ExpressionRequest(BaseModel):
     expression: str
+
+
+class ClusterRequest(BaseModel):
+    points: List[Tuple[float, float]]
+    k: int
 
 
 @app.post("/evaluate")
@@ -37,6 +46,22 @@ async def evaluate(inp: ExpressionRequest):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/cluster")
+async def cluster(inp: ClusterRequest):
+    points = inp.points  # List of (x, y) tuples
+
+    if not points:
+        return {"error": "No points provided."}
+
+    model = KMeans(n_clusters=inp.k, n_init="auto")
+    model.fit(points)
+
+    labels = model.labels_.tolist()
+    centroids = model.cluster_centers_.tolist()
+
+    return {"labels": labels, "centroids": centroids}
 
 
 app.mount("/", StaticFiles(directory="dist/browser", html=True), name="static")

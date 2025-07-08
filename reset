@@ -1,0 +1,52 @@
+[33mcommit 58560608683e866348dc501cc72d0933ad4c5832[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Mon Jul 7 20:59:05 2025 +0300
+
+    add plot component
+    
+    a plot that user can draw points into it
+
+[33mcommit 39fadde2f696b97cb32888ab6062e4584b2a7388[m
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Mon Jul 7 20:58:25 2025 +0300
+
+    reformat all code 🙏
+
+[33mcommit 1b6cf51bd9d541d7a520033d9a7d11e0f23a79de[m
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Sun Jun 29 18:46:13 2025 +0300
+
+    Delete __pycache__ directory
+
+[33mcommit 5deb18637adf532f981361341792bf2ac86ad0e0[m
+Merge: 50c7865 47b4342
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Sun Jun 29 18:44:04 2025 +0300
+
+    add __pycache__ to .gitignore
+
+[33mcommit 50c78654fb224245c745f3ceabbad13bfde83db5[m
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Sun Jun 29 18:41:19 2025 +0300
+
+    add back & next btn
+
+[33mcommit 47b4342aa09a34c76fa1ab117dd00a584087e79c[m
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Tue Jun 24 02:37:59 2025 +0300
+
+    Delete __pycache__ directory
+
+[33mcommit 483d2d80363eb9fe8a3d16f13897352215b2ac8f[m
+Author: PaleEXE <150634604+PaleEXE@users.noreply.github.com>
+Date:   Tue Jun 24 02:35:55 2025 +0300
+
+    Initial Commit
+    
+    Start my graduation journey ⭐
+
+[33mcommit 48973f5efbd33012f82b7e41cd71ac9320fbe2ef[m
+Author: PaleExe <mohammed.alhennawi@gmail.com>
+Date:   Sat Jun 21 01:02:02 2025 +0300
+
+    initial commit

@@ -28,5 +28,16 @@ body {
 }
 
 .big-button {
-  @apply bg-primary-400 w-64 h-48 flex items-center justify-center rounded cursor-pointer hover:bg-primary-500 m-8 text-2xl;
+  @apply bg-primary-400 w-64 h-48 flex text-white items-center justify-center rounded cursor-pointer hover:bg-primary-500 m-8 text-2xl;
+}
+
+/* Hide native spinner arrows */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield; /* Firefox */
 }

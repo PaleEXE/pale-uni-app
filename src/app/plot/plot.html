@@ -1,30 +1,68 @@
 <div class="flex flex-col justify-center items-center h-full">
-  <div class="flex justify-center items-center h-6 mb-6 mt-6">
+  <div class="flex justify-center items-center h-6 mb-8 mt-6">
     <h1 class="text-3xl font-bold text-primary-700">Plot</h1>
   </div>
-
-  <div
-    #plotArea
-    class="relative w-142 h-142 border-2 border-primary-500 rounded-lg z-10"
-    (click)="onPlotClick($event)"
-  >
-    <!-- Y-Axis (Vertical line in center) -->
+  <div class="flex">
+    <div class="flex flex-col gap-6 m-6">
+      <label for="clusterCount" class="font-medium mb-2"
+        >Number of Clusters:</label
+      >
+      <div class="flex items-center space-x-2">
+        <input
+          id="clusterCount"
+          type="number"
+          min="1"
+          [value]="clusterCount"
+          (input)="clusterCount = $any($event.target).valueAsNumber || 1"
+          class="w-20 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
+        />
+        <button
+          (click)="clusterCount = clusterCount ? clusterCount - 1 : 1"
+          class="pale-button text-white px-3 py-1 rounded"
+        >
+          &minus;
+        </button>
+        <button
+          (click)="clusterCount = clusterCount + 1"
+          class="pale-button text-white px-3 py-1 rounded"
+        >
+          &plus;
+        </button>
+      </div>
+      <button class="pale-button h-12" (click)="onClustering()">Cluster</button>
+      <button class="pale-button h-12" (click)="onReset()">Reset</button>
+    </div>
     <div
-      class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary-300 -translate-x-1/2"
-    ></div>
+      #plotArea
+      class="relative w-142 h-142 border-2 border-primary-500 rounded-lg z-10"
+      (click)="onPlotClick($event)"
+    >
+      <!-- Y-Axis (Vertical line in center) -->
+      <div
+        class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary-300 -translate-x-1/2"
+      ></div>
 
-    <!-- X-Axis (Horizontal line in center) -->
-    <div
-      class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-300 -translate-y-1/2"
-    ></div>
+      <!-- X-Axis (Horizontal line in center) -->
+      <div
+        class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-300 -translate-y-1/2"
+      ></div>
 
-    <!-- Points -->
-    @for (p of points(); track $index) {
-    <div
-      class="point absolute size-[8px] rounded-full bg-primary-500"
-      [style.left.px]="getPosX(p)"
-      [style.top.px]="getPosY(p)"
-    ></div>
-    }
+      <!-- Points -->
+      @for (p of points(); track $index) {
+      <div
+        class="point absolute size-[8px] rounded-full"
+        [style.left.px]="getPosX(p)"
+        [style.top.px]="getPosY(p)"
+        [ngClass]="getColor($index)"
+      ></div>
+      } @for (c of centroids(); track $index) {
+      <div
+        class="centroid absolute size-[15px] rounded-full"
+        [style.left.px]="getPosX(c)"
+        [style.top.px]="getPosY(c)"
+        [ngClass]="getCentroidColor($index)"
+      ></div>
+      }
+    </div>
   </div>
 </div>
