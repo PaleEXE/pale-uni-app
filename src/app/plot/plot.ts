@@ -30,6 +30,7 @@ export class Plot implements AfterViewInit {
   points = signal<[number, number][]>([]);
   centroids = signal<[number, number][]>([]);
   labels: (number | null)[] = [];
+  isDrawing = false;
 
   constructor(private http: HttpClient) {}
 
@@ -108,11 +109,11 @@ export class Plot implements AfterViewInit {
   }
 
   getPosX([x]: [number, number]): number {
-    return this.width / 2 + x * 5 - 6;
+    return this.width / 2 + x - 4;
   }
 
   getPosY([, y]: [number, number]): number {
-    return this.height / 2 + y * -5 - 6;
+    return this.height / 2 - y - 4;
   }
 
   getColor(index: number): string {
@@ -146,13 +147,50 @@ export class Plot implements AfterViewInit {
     return colors[index % colors.length] || 'bg-gray-700';
   }
 
+  getSize(): number {
+    return this.eps;
+  }
+  getPosBorderX([x]: [number, number]): number {
+    return this.width / 2 + x - this.eps / 2;
+  }
+  getPosBorderY([, y]: [number, number]): number {
+    return this.height / 2 - y - this.eps / 2;
+  }
+
   onPlotClick(event: MouseEvent): void {
     const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
     const offsetX = event.clientX - rect.left;
     const offsetY = event.clientY - rect.top;
 
-    const x = (offsetX - this.width / 2 + 6) / 5;
-    const y = -(offsetY - this.height / 2 + 6) / 5;
+    const x = offsetX - this.width / 2;
+    const y = -(offsetY - this.height / 2);
+
+    this.points.set([...this.points(), [x, y]]);
+    this.labels.push(null);
+  }
+
+  onPlotMouseDown(event: MouseEvent): void {
+    event.preventDefault(); 
+    this.isDrawing = true;
+    this.addPointFromMouseEvent(event);
+  }
+
+  onPlotMouseMove(event: MouseEvent): void {
+    if (!this.isDrawing) return;
+    this.addPointFromMouseEvent(event);
+  }
+
+  onPlotMouseUp(): void {
+    this.isDrawing = false;
+  }
+
+  private addPointFromMouseEvent(event: MouseEvent): void {
+    const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+
+    const x = offsetX - this.width / 2;
+    const y = -(offsetY - this.height / 2);
 
     this.points.set([...this.points(), [x, y]]);
     this.labels.push(null);
@@ -178,7 +216,7 @@ export class Plot implements AfterViewInit {
     };
 
     // Add algorithm-specific parameters
-    if (this.selectedAlgorithm === 'DBSCAN') {
+    if (this.selectedAlgorithm == 'DBSCAN') {
       request.eps = this.eps;
       request.minSamples = this.minSamples;
     } else {
