@@ -3,7 +3,7 @@
     <h1 class="text-3xl font-bold text-primary-700">Plot</h1>
   </div>
   <div class="flex">
-    <div class="flex flex-col gap-6 m-6">
+    <div class="flex flex-col gap-6 m-6 w-64">
       <select
         id="algorithm"
         class="w-48 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
@@ -17,7 +17,9 @@
 
       <!-- K-Means/Agglomerative Controls -->
       <div *ngIf="selectedAlgorithm !== 'DBSCAN'">
-        <label for="clusterCount" class="font-medium mb-2">Number of Clusters:</label>
+        <label for="clusterCount" class="font-medium mb-2"
+          >Number of Clusters:</label
+        >
         <div class="flex items-center space-x-2">
           <input
             id="clusterCount"
@@ -43,7 +45,7 @@
 
       <!-- DBSCAN Controls -->
       <div *ngIf="selectedAlgorithm === 'DBSCAN'" class="space-y-4">
-        <div>
+        <div class>
           <label for="eps" class="font-medium mb-2">Epsilon (eps):</label>
           <input
             id="eps"
@@ -51,12 +53,14 @@
             min="0.1"
             step="0.1"
             [(ngModel)]="eps"
-            class="w-full px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
+            class="w-48 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
           />
         </div>
-        
+
         <div>
-          <label for="minSamples" class="font-medium mb-2">Minimum Samples:</label>
+          <label for="minSamples" class="font-medium mb-2"
+            >Minimum Samples:</label
+          >
           <div class="flex items-center space-x-2">
             <input
               id="minSamples"
@@ -84,11 +88,14 @@
       <button class="pale-button h-12" (click)="onClustering()">Cluster</button>
       <button class="pale-button h-12" (click)="onReset()">Reset</button>
     </div>
-    
+
     <div
       #plotArea
-      class="relative w-142 h-142 border-2 border-primary-500 rounded-lg z-10"
-      (click)="onPlotClick($event)"
+      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10"
+      (mousedown)="onPlotMouseDown($event)"
+      (mouseup)="onPlotMouseUp()"
+      (mouseleave)="onPlotMouseUp()"
+      (mousemove)="onPlotMouseMove($event)"
     >
       <!-- Y-Axis (Vertical line in center) -->
       <div
@@ -108,8 +115,16 @@
         [style.top.px]="getPosY(p)"
         [ngClass]="getColor($index)"
       ></div>
-      }
-      
+      @if (selectedAlgorithm == 'DBSCAN') {
+      <div
+        class="point absolute rounded-full opacity-10"
+        [style.left.px]="getPosBorderX(p)"
+        [style.top.px]="getPosBorderY(p)"
+        [style.width.px]="getSize()"
+        [style.height.px]="getSize()"
+        [ngClass]="getColor($index)"
+      ></div>
+      } }
       <!-- Centroids -->
       @for (c of centroids(); track $index) {
       <div

@@ -29,9 +29,11 @@ class ExpressionRequest(BaseModel):
 
 
 class ClusterRequest(BaseModel):
-    points: List[Tuple[float, float]]
-    k: int
     algorithm: str
+    points: List[Tuple[float, float]]
+    k: int = 1
+    eps: float = 0.5
+    minSamples: int = 5
 
 
 @app.post("/evaluate")
@@ -52,8 +54,10 @@ async def evaluate(inp: ExpressionRequest):
 
 @app.post("/cluster")
 async def cluster(inp: ClusterRequest):
+    logger.info("Clustering: %s for %d points", inp.algorithm, len(inp.points))
+
     try:
-        points = np.array(inp.points)  # Convert to numpy array
+        points = np.array(inp.points)  
 
         if len(points) == 0:
             raise HTTPException(status_code=400, detail="No points provided.")
@@ -84,17 +88,9 @@ async def cluster(inp: ClusterRequest):
                 centroids.append(cluster_points.mean(axis=0).tolist())
 
         elif inp.algorithm == "DBSCAN":
-            # For DBSCAN, 'k' is used as 'eps' parameter
-            model = DBSCAN(eps=inp.k, min_samples=2)
+            model = DBSCAN(eps=inp.eps, min_samples=inp.minSamples)
             labels = model.fit_predict(points).tolist()
-            # DBSCAN doesn't have centroids, but we can calculate cluster means
             centroids = []
-            unique_labels = set(labels)
-            if -1 in unique_labels:  # -1 is noise in DBSCAN
-                unique_labels.remove(-1)
-            for cluster_id in unique_labels:
-                cluster_points = points[np.array(labels) == cluster_id]
-                centroids.append(cluster_points.mean(axis=0).tolist())
 
         else:
             raise HTTPException(
@@ -106,7 +102,6 @@ async def cluster(inp: ClusterRequest):
             "labels": labels,
             "centroids": centroids,
             "algorithm": inp.algorithm,
-            "num_clusters": len(set(labels)) if labels else 0,
         }
 
     except Exception as e:
