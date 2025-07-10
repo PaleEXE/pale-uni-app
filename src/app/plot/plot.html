@@ -25,18 +25,22 @@
             id="clusterCount"
             type="number"
             min="1"
+            max="10"
             [(ngModel)]="clusterCount"
+            (ngModelChange)="clusterCount = Math.max(1, Math.min(10, clusterCount || 1))"
             class="w-20 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
           />
           <button
             (click)="clusterCount = clusterCount > 1 ? clusterCount - 1 : 1"
             class="pale-button text-white px-3 py-1 rounded"
+            [disabled]="clusterCount <= 1"
           >
             &minus;
           </button>
           <button
-            (click)="clusterCount = clusterCount + 1"
+            (click)="clusterCount = clusterCount < 10 ? clusterCount + 1 : 10"
             class="pale-button text-white px-3 py-1 rounded"
+            [disabled]="clusterCount >= 10"
           >
             &plus;
           </button>
@@ -45,14 +49,16 @@
 
       <!-- DBSCAN Controls -->
       <div *ngIf="selectedAlgorithm === 'DBSCAN'" class="space-y-4">
-        <div class>
+        <div>
           <label for="eps" class="font-medium mb-2">Epsilon (eps):</label>
           <input
             id="eps"
             type="number"
             min="0.1"
+            max="50"
             step="0.1"
             [(ngModel)]="eps"
+            (ngModelChange)="eps = Math.max(0.1, Math.min(50, eps || 0.1))"
             class="w-48 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
           />
         </div>
@@ -67,11 +73,13 @@
               type="number"
               min="1"
               [(ngModel)]="minSamples"
+              (ngModelChange)="minSamples = Math.max(1, minSamples || 1)"
               class="w-20 px-3 py-2 border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ring-primary-700"
             />
             <button
               (click)="minSamples = minSamples > 1 ? minSamples - 1 : 1"
               class="pale-button text-white px-3 py-1 rounded"
+              [disabled]="minSamples <= 1"
             >
               &minus;
             </button>
@@ -86,13 +94,24 @@
       </div>
 
       <button class="pale-button h-12" (click)="onClustering()">Cluster</button>
+      <button
+        class="pale-button h-12"
+        [class.bg-red-600]="deleteMode"
+        (click)="toggleDeleteMode()"
+      >
+        {{ deleteMode ? 'Cancel Delete' : 'Delete Points' }}
+      </button>
       <button class="pale-button h-12" (click)="onReset()">Reset</button>
     </div>
 
     <div
       #plotArea
-      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10"
+      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden"
+      [class.border-primary-500]="!deleteMode"
+      [class.border-red-500]="deleteMode"
+      [class.cursor-crosshair]="deleteMode"
       (mousedown)="onPlotMouseDown($event)"
+      (click)="onPlotClick($event)"
       (mouseup)="onPlotMouseUp()"
       (mouseleave)="onPlotMouseUp()"
       (mousemove)="onPlotMouseMove($event)"
