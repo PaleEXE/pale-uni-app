@@ -15,7 +15,7 @@ A stunning visual playground for exploring AI algorithms through interactive vis
 
 | Truth Table Visualizer         | Cluster Visualization           |
 | ------------------------------ | ------------------------------- |
-| ![Truth Table](gh_imgs/TT.png) | ![Cluster](gh_imgs/Cluster.png) |
+| ![Truth Table](gh_imgs/TT.png) | ![Cluster](gh_imgs/Cluster2.png) |
 
 ## 🚀 Quick Start
 
