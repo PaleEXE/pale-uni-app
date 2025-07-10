@@ -24,6 +24,7 @@ export class Topic implements OnInit {
       if (slugify(topic.title)) {
         this.title = topic.title;
         this.subTopics = topic.subtopics;
+        this.topicId = id;
       } else {
         this.title = 'Topic Not Found';
         this.subTopics = [];

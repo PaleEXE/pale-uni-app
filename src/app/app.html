@@ -2,7 +2,12 @@
   class="w-full bg-primary-100 text-primary-700 px-4 py-3 flex justify-between items-center shadow"
 >
   <div class="flex items-center gap-2">
-    <h1 [routerLink]="['/']" class="mr-8 text-xl font-bold cursor-pointer">
+    <h1
+      [routerLink]="['/']"
+      class="mr-8 text-xl font-bold cursor-pointer"
+      draggable="false"
+      tabindex="-1"
+    >
       PALE
     </h1>
     <svg
@@ -10,6 +15,7 @@
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      (click)="onBack()"
     >
       <path
         d="M38 24H10M10 24L24 38M10 24L24 10"
@@ -24,6 +30,7 @@
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      (click)="onForward()"
     >
       <path
         d="M10 24H38M38 24L24 10M38 24L24 38"

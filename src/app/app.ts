@@ -1,7 +1,7 @@
-import { Component, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterOutlet } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, Location } from '@angular/common';
 
 @Component({
   selector: 'app-root',
@@ -11,8 +11,12 @@ import { isPlatformBrowser } from '@angular/common';
 })
 export class App implements OnInit {
   protected title = 'pale-uni-app';
-  platformId = PLATFORM_ID;
   selectedTheme: string = 'amber';
+
+  constructor(
+    private location: Location,
+    @Inject(PLATFORM_ID) public platformId: Object
+  ) {}
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -53,6 +57,16 @@ export class App implements OnInit {
         `--color-primary-${shade}`,
         `var(--color-${theme}-${shade})`
       );
+    }
+  }
+  onBack() {
+    if (isPlatformBrowser(this.platformId)) {
+      window.history.back();
+    }
+  }
+  onForward() {
+    if (isPlatformBrowser(this.platformId)) {
+      window.history.forward();
     }
   }
 }
