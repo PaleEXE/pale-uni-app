@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
 @import 'tailwindcss' layer(base);
-
 @theme {
   --color-primary-50: var(--color-amber-50);
   --color-primary-100: var(--color-amber-100);
@@ -13,22 +12,36 @@
   --color-primary-800: var(--color-amber-800);
   --color-primary-900: var(--color-amber-900);
 }
-
 * {
   font-family: 'JetBrains Mono', monospace;
 }
-
 body {
-  min-height: 100hv;
+  min-height: 100vh;
   background-color: var(--color-primary-200);
+}
+
+select {
+  padding-right: 1rem;
+}
+
+select option {
+  padding-right: 300px;
 }
 
 .pale-button {
   @apply py-2 px-4 rounded-lg text-white bg-primary-400 hover:bg-primary-600 cursor-pointer transition;
 }
-
 .big-button {
   @apply bg-primary-400 w-64 h-48 flex text-white items-center justify-center rounded cursor-pointer hover:bg-primary-500 m-8 text-2xl;
+}
+select {
+  padding-right: 1rem;
+}
+select option {
+  padding-right: 300px;
+}
+.text-box {
+  @apply border border-primary-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
 }
 
 /* Hide native spinner arrows */
