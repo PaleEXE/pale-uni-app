@@ -12,6 +12,7 @@ import { topics, slugify } from '../data.service'; // adjust path as needed
 export class Topic implements OnInit {
   topicId: number = 0;
   title: string = '';
+  description: string = '';
   subTopics: string[] = [];
 
   constructor(private route: ActivatedRoute) {}
@@ -24,6 +25,7 @@ export class Topic implements OnInit {
       if (slugify(topic.title)) {
         this.title = topic.title;
         this.subTopics = topic.subtopics;
+        this.description = topic.description || '';
         this.topicId = id;
       } else {
         this.title = 'Topic Not Found';
