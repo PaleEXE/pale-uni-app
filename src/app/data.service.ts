@@ -1,5 +1,10 @@
 export const topics = [
-  { title: 'Knowledge Representation', subtopics: ['Logic Evaluator'] },
+  {
+    title: 'Knowledge Representation',
+    description:
+      'Knowledge representation (KR) aims to model information in a structured manner to formally represent it as knowledge in knowledge-based systems whereas knowledge representation and reasoning (KRR, KR&R, or KR²) also aims to understand, reason, and interpret knowledge.',
+    subtopics: ['Logic Evaluator'],
+  },
   {
     title: 'Data Mining & Clustering',
     description:
