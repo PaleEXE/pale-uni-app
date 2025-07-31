@@ -1,0 +1,16 @@
+<div
+  #graphArea
+  class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden shadow cursor-pointer"
+  (click)="onClickAddNode($event)"
+>
+  @for (n of nodes(); track n.id) {
+  <div
+    class="size-[32px] absolute rounded-full bg-primary-500 flex items-center justify-center text-white font-bold text-xs"
+    [style.left.px]="getPosX(n.pos)"
+    [style.top.px]="getPosY(n.pos)"
+    title="{{ n.name }}"
+  >
+    {{ n.name }}
+  </div>
+  }
+</div>

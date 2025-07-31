@@ -3,6 +3,7 @@ import { HomePage } from './home-page/home-page';
 import { LogicEvaluator } from './logic-evaluator/logic-evaluator';
 import { Topic } from './topic/topic';
 import { Plot } from './plot/plot';
+import { Graph } from './graph/graph';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -19,5 +20,9 @@ export const routes: Routes = [
   {
     path: 'topic/:topicId/plot',
     component: Plot,
+  },
+  {
+    path: 'topic/:topicId/graph',
+    component: Graph,
   },
 ];
