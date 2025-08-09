@@ -3,7 +3,7 @@ import { HomePage } from './home-page/home-page';
 import { LogicEvaluator } from './logic-evaluator/logic-evaluator';
 import { Topic } from './topic/topic';
 import { Plot } from './plot/plot';
-import { Graph } from './graph/graph';
+import { FPGrowth } from './fp-growth/fp-growth';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -22,7 +22,7 @@ export const routes: Routes = [
     component: Plot,
   },
   {
-    path: 'topic/:topicId/graph',
-    component: Graph,
+    path: 'topic/:topicId/fp-growth',
+    component: FPGrowth,
   },
 ];

@@ -22,12 +22,12 @@ interface TreeNode {
 
 @Component({
   selector: 'app-tree-graph',
-  templateUrl: './graph.html',
-  styleUrls: ['./graph.css'],
+  templateUrl: './fp-growth.html',
+  styleUrls: ['./fp-growth.css'],
   imports: [FormsModule],
   standalone: true,
 })
-export class Graph implements OnInit, AfterViewInit, OnDestroy {
+export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('treeArea', { static: true }) treeArea!: ElementRef;
   private svg!: d3.Selection<SVGGElement, unknown, HTMLElement, any>;
   private width = 570;

@@ -1,18 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Graph } from './graph';
+import { FPGrowth } from './fp-growth';
 
-describe('Graph', () => {
-  let component: Graph;
-  let fixture: ComponentFixture<Graph>;
+describe('FPGrowth', () => {
+  let component: FPGrowth;
+  let fixture: ComponentFixture<FPGrowth>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Graph]
-    })
-    .compileComponents();
+      imports: [FPGrowth],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(Graph);
+    fixture = TestBed.createComponent(FPGrowth);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
