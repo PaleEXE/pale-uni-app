@@ -1,89 +1,248 @@
-import { Component, ElementRef, ViewChild, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  AfterViewInit,
+  Inject,
+  OnDestroy,
+} from '@angular/core';
+import { PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import * as d3 from 'd3';
+import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
+
+interface TreeNode {
+  name: string;
+  count: number;
+  children: TreeNode[];
+  parent?: TreeNode;
+}
 
 @Component({
-  selector: 'app-graph',
-  imports: [],
+  selector: 'app-tree-graph',
   templateUrl: './graph.html',
-  styleUrl: './graph.css',
+  styleUrls: ['./graph.css'],
+  imports: [FormsModule],
+  standalone: true,
 })
-export class Graph {
-  @ViewChild('plotArea') graphAreaRef!: ElementRef<HTMLDivElement>;
-  width = 0;
-  height = 0;
-  nodes = signal<any[]>([
-    {
-      id: 0,
-      name: 'A',
-      pos: [0, 0],
-      neighbors: [
-        [1, 1, 1],
-        [2, 3, 2],
-      ],
-    },
-    {
-      id: 1,
-      name: 'B',
-      pos: [2, 4],
-      neighbors: [
-        [3, 1, 1],
-        [4, 2, 1],
-        [5, 4, 3],
-      ],
-    },
-    {
-      id: 2,
-      name: 'C',
-      pos: [9, 18],
-      neighbors: [
-        [6, 8, 2],
-        [7, 18, 14],
-      ],
-    },
-    { id: 3, name: 'D', pos: [10, 14], neighbors: [] },
-    { id: 4, name: 'E', pos: [200, 300], neighbors: [] },
-    { id: 5, name: 'F', pos: [200, 24], neighbors: [[8, 12, 11]] },
-    { id: 6, name: 'H', pos: [14, 9], neighbors: [] },
-    { id: 7, name: 'I', pos: [18, 18], neighbors: [] },
-    { id: 8, name: 'V', pos: [30, 30], neighbors: [] },
-  ]);
+export class Graph implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('treeArea', { static: true }) treeArea!: ElementRef;
+  private svg!: d3.Selection<SVGGElement, unknown, HTMLElement, any>;
+  private width = 570;
+  private height = 570;
+
+  @ViewChild('itemInput') itemInput!: ElementRef<HTMLInputElement>;
+  transactions: { items: string; count: number }[] = [];
+  data: TreeNode = { name: 'root', count: 0, children: [] };
+
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+
+  ngOnInit() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadFromLocalStorage();
+    }
+  }
 
   ngAfterViewInit() {
-    const el = this.graphAreaRef.nativeElement;
-    this.width = el.offsetWidth;
-    this.height = el.offsetHeight;
+    this.initializeSVG();
+    this.onUpdateTree();
   }
 
-  getPosX([x]: [number, number]): number {
-    return this.width / 2 + x - 16;
+  ngOnDestroy() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.saveToLocalStorage();
+    }
   }
 
-  getPosY([, y]: [number, number]): number {
-    return this.height / 2 - y + 16;
+  onAddTransaction() {
+    this.transactions.push({ items: '', count: 1 });
+    this.saveToLocalStorage();
   }
 
-  onClickAddNode(event: MouseEvent): void {
-    const rect = this.graphAreaRef.nativeElement.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left;
-    const offsetY = event.clientY - rect.top;
+  onRemoveTransaction(i: number) {
+    this.transactions.splice(i, 1);
+    this.saveToLocalStorage();
+    this.onUpdateTree();
+  }
 
-    // Place new node at clicked position, convert to graph coordinates
-    const x = offsetX - this.width / 2;
-    const y = -(offsetY - this.height / 2);
+  onUpdateTree() {
+    this.saveToLocalStorage();
 
-    const nodesArr = this.nodes();
-    const newId = nodesArr.length
-      ? Math.max(...nodesArr.map((n) => n.id)) + 1
-      : 0;
-    const newName = String.fromCharCode(65 + (newId % 26)); // A-Z cycling
+    // Process transactions correctly
+    const transactionStrings = this.transactions
+      .filter((tx) => tx.items.trim() !== '' && tx.count > 0)
+      .flatMap((tx) => Array(tx.count).fill(tx.items.trim()));
 
-    this.nodes.update((nodes) => [
-      ...nodes,
-      {
-        id: newId,
-        name: newName,
-        pos: [x, y],
-        neighbors: [],
-      },
-    ]);  
+    this.data = this.buildFPTree(transactionStrings);
+    this.renderTree();
+  }
+
+  private saveToLocalStorage(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        localStorage.setItem('fp-tree-width', this.width.toString());
+        localStorage.setItem('fp-tree-height', this.height.toString());
+        localStorage.setItem(
+          'fp-tree-transactions',
+          JSON.stringify(this.transactions)
+        );
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+    }
+  }
+
+  private loadFromLocalStorage(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        const width = localStorage.getItem('fp-tree-width');
+        const height = localStorage.getItem('fp-tree-height');
+        const transactions = localStorage.getItem('fp-tree-transactions');
+
+        if (width) this.width = parseInt(width, 10);
+        if (height) this.height = parseInt(height, 10);
+        if (transactions) this.transactions = JSON.parse(transactions);
+
+        if (!transactions || this.transactions.length === 0) {
+          this.transactions = [{ items: 'A B C', count: 1 }];
+        }
+      } catch (e) {
+        console.error('Failed to load from localStorage', e);
+        this.transactions = [{ items: 'A B C', count: 1 }];
+      }
+    } else {
+      this.transactions = [{ items: 'A B C', count: 1 }];
+    }
+  }
+
+  private buildFPTree(
+    transactions: string[],
+    minSupport: number = 1
+  ): TreeNode {
+    // 1. Calculate item frequencies
+    const frequencyMap = new Map<string, number>();
+    for (const transaction of transactions) {
+      const items = transaction.split(/\s+/).filter(Boolean);
+      for (const item of items) {
+        frequencyMap.set(item, (frequencyMap.get(item) || 0) + 1);
+      }
+    }
+
+    // 2. Create frequency-descending order
+    const sortedItems = Array.from(frequencyMap.entries())
+      .filter(([_, count]) => count >= minSupport)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([item]) => item);
+
+    // 3. Build the FP-Tree
+    const root: TreeNode = { name: 'root', count: 0, children: [] };
+
+    for (const transaction of transactions) {
+      const items = transaction
+        .split(/\s+/)
+        .filter((item) => frequencyMap.get(item)! >= minSupport)
+        .sort((a, b) => sortedItems.indexOf(a) - sortedItems.indexOf(b));
+
+      let currentNode = root;
+      for (const item of items) {
+        let child = currentNode.children.find((c) => c.name === item);
+        if (!child) {
+          child = { name: item, count: 0, children: [], parent: currentNode };
+          currentNode.children.push(child);
+        }
+        child.count++;
+        currentNode = child;
+      }
+    }
+
+    return root;
+  }
+
+  private initializeSVG() {
+    const container = d3.select<HTMLElement, unknown>(
+      this.treeArea.nativeElement
+    );
+    container.selectAll<SVGElement, unknown>('*').remove();
+
+    const svg = container
+      .append<SVGSVGElement>('svg')
+      .attr('width', this.width)
+      .attr('height', this.height);
+
+    this.svg = svg
+      .append<SVGGElement>('g')
+      .attr('transform', `translate(0, 50)`);
+  }
+
+  private renderTree() {
+    if (!this.svg) return;
+
+    const root = d3.hierarchy(this.data);
+    const treeLayout = d3
+      .tree<TreeNode>()
+      .size([this.height - 100, this.width - 200]);
+    const treeData = treeLayout(root);
+    const nodes = treeData.descendants();
+
+    const minX = d3.min(nodes, (d) => d.x) ?? 0;
+    const maxX = d3.max(nodes, (d) => d.x) ?? 0;
+    const minY = d3.min(nodes, (d) => d.y) ?? 0;
+    const maxY = d3.max(nodes, (d) => d.y) ?? 0;
+
+    const treeWidth = maxY - minY;
+    const treeHeight = maxX - minX;
+
+    const horizontalOffset = (this.width - treeWidth) / 2 - minY;
+    const verticalOffset = (this.height - treeHeight) / 2 - minX;
+
+    this.svg.selectAll('*').remove();
+
+    this.svg
+      .selectAll('.link')
+      .data(treeData.links())
+      .enter()
+      .append('path')
+      .attr('class', 'link')
+      .attr(
+        'd',
+        d3
+          .linkVertical<
+            d3.HierarchyPointLink<TreeNode>,
+            d3.HierarchyPointNode<TreeNode>
+          >()
+          .x((d) => d.x + verticalOffset)
+          .y((d) => d.y + horizontalOffset)
+      )
+      .attr('fill', 'none')
+      .attr('stroke', 'var(--color-primary-400)')
+      .attr('stroke-width', 2);
+
+    const node = this.svg
+      .selectAll('.node')
+      .data(nodes)
+      .enter()
+      .append('g')
+      .attr('class', 'node')
+      .attr(
+        'transform',
+        (d) => `translate(${d.x + verticalOffset},${d.y + horizontalOffset})`
+      );
+
+    node
+      .append('circle')
+      .attr('r', 8)
+      .attr('fill', 'var(--color-primary-500)')
+      .attr('stroke', 'var(--color-primary-700)')
+      .attr('stroke-width', 2);
+
+    node
+      .append('text')
+      .attr('dx', (d) => (d.children ? -12 : 12))
+      .attr('dy', (d) => (d.children ? 16 : 4))
+      .attr('text-anchor', (d) => (d.children ? 'end' : 'start'))
+      .attr('fill', 'var(--color-primary-700)')
+      .text((d) => `${d.data.name}${d.data.count ? `:${d.data.count}` : ''}`);
   }
 }

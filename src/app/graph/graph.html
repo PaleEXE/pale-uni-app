@@ -1,16 +1,61 @@
-<div
-  #graphArea
-  class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden shadow cursor-pointer"
-  (click)="onClickAddNode($event)"
->
-  @for (n of nodes(); track n.id) {
-  <div
-    class="size-[32px] absolute rounded-full bg-primary-500 flex items-center justify-center text-white font-bold text-xs"
-    [style.left.px]="getPosX(n.pos)"
-    [style.top.px]="getPosY(n.pos)"
-    title="{{ n.name }}"
-  >
-    {{ n.name }}
+<div class="flex flex-col justify-center items-center h-full">
+  <!-- Header -->
+  <div class="flex justify-center items-center h-6 mb-8 mt-6">
+    <h1 class="text-3xl font-bold text-primary-700">FP-Growth Tree</h1>
   </div>
-  }
+
+  <!-- Main Content -->
+  <div class="flex">
+    <!-- Side Panel -->
+    @if (transactions) {
+      <div class="flex flex-col gap-6 m-6 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow">
+        <h2 class="text-lg font-semibold text-primary-700 mb-2">Transactions</h2>
+        
+        @for (tx of transactions; track $index; let i = $index) {
+          <div class="flex gap-2 items-center">
+            <input
+              type="text"
+              placeholder="Items (space separated)"
+              [(ngModel)]="tx.items"
+              class="w-48 px-3 py-2 text-box"
+            />
+            <input
+              type="number"
+              min="1"
+              placeholder="Count"
+              [(ngModel)]="tx.count"
+              class="w-12 px-3 py-2 text-box"
+            />
+            <button
+              (click)="onRemoveTransaction(i)"
+              class="text-red-600 hover:text-red-800 font-bold px-2"
+              title="Remove"
+            >
+              &times;
+            </button>
+          </div>
+        }
+
+        <button
+          (click)="onAddTransaction()"
+          class="pale-button text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+        >
+          + Add Transaction
+        </button>
+        
+        <button
+          (click)="onUpdateTree()"
+          class="pale-button text-white bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded mt-4"
+        >
+          Draw Tree
+        </button>
+      </div>
+    }
+
+    <!-- Tree Area -->
+    <div
+      #treeArea
+      class="relative w-[640px] h-[640px] border-2 border-primary-500 bg-primary-50 rounded-lg z-2 overflow-hidden shadow"
+    ></div>
+  </div>
 </div>
