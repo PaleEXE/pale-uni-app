@@ -30,8 +30,8 @@ interface TreeNode {
 export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('treeArea', { static: true }) treeArea!: ElementRef;
   private svg!: d3.Selection<SVGGElement, unknown, HTMLElement, any>;
-  private width = 570;
-  private height = 570;
+  private width = 640;
+  private height = 640;
 
   @ViewChild('itemInput') itemInput!: ElementRef<HTMLInputElement>;
   transactions: { items: string; count: number }[] = [];
@@ -42,6 +42,8 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.loadFromLocalStorage();
+      this.width = this.treeArea.nativeElement.clientWidth || 640;
+      this.height = this.treeArea.nativeElement.clientHeight || 640;
     }
   }
 
@@ -173,7 +175,7 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
 
     this.svg = svg
       .append<SVGGElement>('g')
-      .attr('transform', `translate(0, 50)`);
+      .attr('transform', `translate(0, 0)`);
   }
 
   private renderTree() {
@@ -182,7 +184,7 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
     const root = d3.hierarchy(this.data);
     const treeLayout = d3
       .tree<TreeNode>()
-      .size([this.height - 100, this.width - 200]);
+      .size([this.height - 100, this.width - 100]);
     const treeData = treeLayout(root);
     const nodes = treeData.descendants();
 
@@ -239,10 +241,25 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
 
     node
       .append('text')
-      .attr('dx', (d) => (d.children ? -12 : 12))
-      .attr('dy', (d) => (d.children ? 16 : 4))
-      .attr('text-anchor', (d) => (d.children ? 'end' : 'start'))
+      .attr('dx', (d) => this.getTextPosition(d).x)
+      .attr('dy', (d) => this.getTextPosition(d).y)
+      .attr('text-anchor', (d) => this.getAnchor(d))
       .attr('fill', 'var(--color-primary-700)')
       .text((d) => `${d.data.name}${d.data.count ? `:${d.data.count}` : ''}`);
+  }
+
+  getTextPosition(d: d3.HierarchyPointNode<TreeNode>): {
+    x: number;
+    y: number;
+  } {
+    if (d.data.name === 'root') return { x: 0, y: -16 };
+    const x = d.children ? -12 : 12;
+    const y = d.children ? 16 : 4;
+    return { x, y };
+  }
+
+  getAnchor(d: d3.HierarchyPointNode<TreeNode>): string {
+    if (d.data.name === 'root') return 'middle';
+    return d.children ? 'end' : 'start';
   }
 }

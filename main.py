@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 import numpy as np
-
+# Hello
 from PLogic import PExp
 
 logging.basicConfig(
@@ -57,7 +57,7 @@ async def cluster(inp: ClusterRequest):
     logger.info("Clustering: %s for %d points", inp.algorithm, len(inp.points))
 
     try:
-        points = np.array(inp.points)  
+        points = np.array(inp.points)
 
         if len(points) == 0:
             raise HTTPException(status_code=400, detail="No points provided.")

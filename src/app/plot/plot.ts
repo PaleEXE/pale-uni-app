@@ -3,14 +3,72 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  OnDestroy,
   inject,
   signal,
+  computed,
   PLATFORM_ID,
-  OnDestroy,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+
+// Types and constants for better type safety
+type AlgorithmType = 'kmeans' | 'Agglomerative' | 'DBSCAN';
+type Point = [number, number];
+
+interface ClusterRequest {
+  points: Point[];
+  algorithm: AlgorithmType;
+  k?: number;
+  eps?: number;
+  minSamples?: number;
+}
+
+interface ClusterResponse {
+  centroids: Point[];
+  labels: (number | null)[];
+}
+
+// Constants
+const COLOR_PALETTE = {
+  points: [
+    'bg-red-500',
+    'bg-green-500',
+    'bg-blue-500',
+    'bg-yellow-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-emerald-500',
+    'bg-fuchsia-500',
+    'bg-orange-500',
+  ],
+  centroids: [
+    'bg-red-700',
+    'bg-green-700',
+    'bg-blue-700',
+    'bg-yellow-700',
+    'bg-purple-700',
+    'bg-pink-700',
+    'bg-indigo-700',
+    'bg-emerald-700',
+    'bg-fuchsia-700',
+    'bg-orange-700',
+  ],
+};
+
+const STORAGE_KEYS = {
+  WIDTH: 'plot-width',
+  HEIGHT: 'plot-height',
+  POINTS: 'plot-points',
+  LABELS: 'plot-labels',
+  CENTROIDS: 'plot-centroids',
+  ALGORITHM: 'plot-algorithm',
+  CLUSTER_COUNT: 'plot-clusterCount',
+  EPS: 'plot-eps',
+  MIN_SAMPLES: 'plot-minSamples',
+} as const;
 
 @Component({
   selector: 'app-plot',
@@ -21,134 +79,138 @@ import { FormsModule } from '@angular/forms';
 })
 export class Plot implements AfterViewInit, OnDestroy {
   @ViewChild('plotArea') plotAreaRef!: ElementRef<HTMLDivElement>;
-  private platformId = inject(PLATFORM_ID);
 
-  width = 0;
-  height = 0;
-  selectedAlgorithm: 'kmeans' | 'Agglomerative' | 'DBSCAN' = 'kmeans';
-  clusterCount = 2;
-  eps = 0.5;
-  minSamples = 2;
-  points = signal<[number, number][]>([]);
-  centroids = signal<[number, number][]>([]);
-  labels: (number | null)[] = [];
-  isDrawing = false;
-  deleteMode = false;
-  Math = Math;
+  // Dependency injection
+  private readonly http = inject(HttpClient);
+  private readonly platformId = inject(PLATFORM_ID);
 
-  // Store bound event handlers for cleanup
-  private boundMouseMove = this.onDocumentMouseMove.bind(this);
-  private boundMouseUp = this.onDocumentMouseUp.bind(this);
+  // State signals
+  readonly width = signal(0);
+  readonly height = signal(0);
+  readonly points = signal<Point[]>([]);
+  readonly centroids = signal<Point[]>([]);
+  readonly labels = signal<(number | null)[]>([]);
 
-  constructor(private http: HttpClient) {}
+  // UI state
+  readonly selectedAlgorithm = signal<AlgorithmType>('kmeans');
+  readonly clusterCount = signal(2);
+  readonly eps = signal(0.5);
+  readonly minSamples = signal(2);
+  readonly isDrawing = signal(false);
+  readonly deleteMode = signal(false);
 
-  ngAfterViewInit() {
-    const el = this.plotAreaRef.nativeElement;
-    this.width = el.offsetWidth;
-    this.height = el.offsetHeight;
-    if (isPlatformBrowser(this.platformId)) this.loadFromLocalStorage();
+  // Computed values
+  readonly pointSize = computed(() => this.eps() * 4);
+  readonly isBrowser = computed(() => isPlatformBrowser(this.platformId));
+
+  // Event handlers with proper typing
+  private readonly boundMouseMove = this.onDocumentMouseMove.bind(this);
+  private readonly boundMouseUp = this.onDocumentMouseUp.bind(this);
+
+  // Expose Math for template
+  readonly Math = Math;
+
+  ngAfterViewInit(): void {
+    const element = this.plotAreaRef.nativeElement;
+    this.width.set(element.offsetWidth);
+    this.height.set(element.offsetHeight);
+
+    if (this.isBrowser()) {
+      this.loadFromLocalStorage();
+    }
   }
 
-  ngOnDestroy() {
-    if (isPlatformBrowser(this.platformId)) {
+  ngOnDestroy(): void {
+    if (this.isBrowser()) {
       this.saveToLocalStorage();
-      // Clean up any remaining event listeners
-      document.removeEventListener('mousemove', this.boundMouseMove);
-      document.removeEventListener('mouseup', this.boundMouseUp);
+      this.cleanupEventListeners();
     }
   }
 
-  // --- Local Storage ---
-  private loadFromLocalStorage() {
-    const get = (key: string) => localStorage.getItem(key);
-    if (get('plot-width')) this.width = parseInt(get('plot-width')!, 10);
-    if (get('plot-height')) this.height = parseInt(get('plot-height')!, 10);
-    if (get('plot-algorithm'))
-      this.selectedAlgorithm = get('plot-algorithm') as any;
-    if (get('plot-clusterCount'))
-      this.clusterCount = parseInt(get('plot-clusterCount')!, 10);
-    if (get('plot-eps')) this.eps = parseFloat(get('plot-eps')!);
-    if (get('plot-minSamples'))
-      this.minSamples = parseInt(get('plot-minSamples')!, 10);
+  // --- Local Storage Management ---
+  private loadFromLocalStorage(): void {
+    const getItem = (key: string): string | null => localStorage.getItem(key);
+    const parseNumber = (value: string | null): number =>
+      value ? Number(value) : 0;
+    const parseArray = <T>(value: string | null): T[] => {
+      try {
+        return value ? JSON.parse(value) : [];
+      } catch {
+        return [];
+      }
+    };
 
-    try {
-      this.labels = JSON.parse(get('plot-labels') || '[]');
-    } catch {
-      this.labels = [];
-    }
-    try {
-      this.points.set(JSON.parse(get('plot-points') || '[]'));
-    } catch {
-      this.points.set([]);
-    }
-    try {
-      this.centroids.set(JSON.parse(get('plot-centroids') || '[]'));
-    } catch {
-      this.centroids.set([]);
-    }
+    const algorithm = getItem(STORAGE_KEYS.ALGORITHM) as AlgorithmType;
+    if (algorithm) this.selectedAlgorithm.set(algorithm);
+
+    this.width.set(parseNumber(getItem(STORAGE_KEYS.WIDTH)) || this.width());
+    this.height.set(parseNumber(getItem(STORAGE_KEYS.HEIGHT)) || this.height());
+    this.clusterCount.set(
+      parseNumber(getItem(STORAGE_KEYS.CLUSTER_COUNT)) || this.clusterCount()
+    );
+    this.eps.set(parseNumber(getItem(STORAGE_KEYS.EPS)) || this.eps());
+    this.minSamples.set(
+      parseNumber(getItem(STORAGE_KEYS.MIN_SAMPLES)) || this.minSamples()
+    );
+
+    this.labels.set(
+      parseArray<(number | null)>(getItem(STORAGE_KEYS.LABELS))
+    );
+    this.points.set(parseArray<Point>(getItem(STORAGE_KEYS.POINTS)));
+    this.centroids.set(parseArray<Point>(getItem(STORAGE_KEYS.CENTROIDS)));
   }
 
-  private saveToLocalStorage() {
-    localStorage.setItem('plot-width', this.width.toString());
-    localStorage.setItem('plot-height', this.height.toString());
-    localStorage.setItem('plot-points', JSON.stringify(this.points()));
-    localStorage.setItem('plot-labels', JSON.stringify(this.labels));
-    localStorage.setItem('plot-centroids', JSON.stringify(this.centroids()));
-    localStorage.setItem('plot-algorithm', this.selectedAlgorithm);
-    localStorage.setItem('plot-clusterCount', this.clusterCount.toString());
-    localStorage.setItem('plot-eps', this.eps.toString());
-    localStorage.setItem('plot-minSamples', this.minSamples.toString());
+  private saveToLocalStorage(): void {
+    const setItem = (key: string, value: string): void => {
+      localStorage.setItem(key, value);
+    };
+
+    setItem(STORAGE_KEYS.WIDTH, this.width().toString());
+    setItem(STORAGE_KEYS.HEIGHT, this.height().toString());
+    setItem(STORAGE_KEYS.POINTS, JSON.stringify(this.points()));
+    setItem(STORAGE_KEYS.LABELS, JSON.stringify(this.labels()));
+    setItem(STORAGE_KEYS.CENTROIDS, JSON.stringify(this.centroids()));
+    setItem(STORAGE_KEYS.ALGORITHM, this.selectedAlgorithm());
+    setItem(STORAGE_KEYS.CLUSTER_COUNT, this.clusterCount().toString());
+    setItem(STORAGE_KEYS.EPS, this.eps().toString());
+    setItem(STORAGE_KEYS.MIN_SAMPLES, this.minSamples().toString());
   }
 
   // --- Plotting Helpers ---
-  getPosX([x]: [number, number]): number {
-    return this.width / 2 + x - 4;
-  }
-  getPosY([, y]: [number, number]): number {
-    return this.height / 2 - y - 4;
-  }
-  getPosBorderX([x]: [number, number]): number {
-    return this.width / 2 + x - this.getSize() / 2;
-  }
-  getPosBorderY([, y]: [number, number]): number {
-    return this.height / 2 - y - this.getSize() / 2;
-  }
-  getSize(): number {
-    return this.eps * 4;
+  getPointPosition([x, y]: Point): { x: number; y: number } {
+    return {
+      x: this.width() / 2 + x - 4,
+      y: this.height() / 2 - y - 4,
+    };
   }
 
-  getColor(index: number): string {
-    const label = this.labels?.[index];
-    if (label === null || label === undefined) return 'bg-gray-600';
-    const colors = [
-      'bg-red-500',
-      'bg-green-500',
-      'bg-blue-500',
-      'bg-yellow-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-emerald-500',
-      'bg-fuchsia-500',
-      'bg-orange-500',
-    ];
-    return label === -1 ? 'bg-gray-400' : colors[label % colors.length];
+  getPointBorderPosition([x, y]: Point): { x: number; y: number } {
+    const size = this.pointSize() / 2;
+    return {
+      x: this.width() / 2 + x - size,
+      y: this.height() / 2 - y - size,
+    };
+  }
+
+  getPointColor(index: number): string {
+    const label = this.labels()[index];
+
+    if (label === null || label === undefined) {
+      return 'bg-gray-600';
+    }
+
+    if (label === -1) {
+      return 'bg-gray-400';
+    }
+
+    return COLOR_PALETTE.points[label % COLOR_PALETTE.points.length];
   }
 
   getCentroidColor(index: number): string {
-    const colors = [
-      'bg-red-700',
-      'bg-green-700',
-      'bg-blue-700',
-      'bg-yellow-700',
-      'bg-purple-700',
-      'bg-pink-700',
-      'bg-indigo-700',
-      'bg-emerald-700',
-      'bg-fuchsia-700',
-      'bg-orange-700',
-    ];
-    return colors[index % colors.length] || 'bg-gray-700';
+    return (
+      COLOR_PALETTE.centroids[index % COLOR_PALETTE.centroids.length] ||
+      'bg-gray-700'
+    );
   }
 
   // --- Point Management ---
@@ -156,19 +218,33 @@ export class Plot implements AfterViewInit, OnDestroy {
     const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
-    let closestIndex = -1,
-      minDistance = Infinity;
 
-    this.points().forEach(([x, y]: number[], index: number) => {
-      const dx = clickX - this.getPosX([x, y]);
-      const dy = clickY - this.getPosY([x, y]);
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance < minDistance && distance < 20) {
+    const closestIndex = this.findClosestPointIndex(clickX, clickY, 20);
+
+    if (closestIndex >= 0) {
+      this.deletePoint(closestIndex);
+    }
+  }
+
+  private findClosestPointIndex(
+    targetX: number,
+    targetY: number,
+    maxDistance: number
+  ): number {
+    let closestIndex = -1;
+    let minDistance = Infinity;
+
+    this.points().forEach((point: Point, index: number) => {
+      const { x, y } = this.getPointPosition(point);
+      const distance = Math.sqrt((targetX - x) ** 2 + (targetY - y) ** 2);
+
+      if (distance < minDistance && distance < maxDistance) {
         minDistance = distance;
         closestIndex = index;
       }
     });
-    if (closestIndex >= 0) this.onDeletePoint(closestIndex);
+
+    return closestIndex;
   }
 
   private addPointFromMouseEvent(event: MouseEvent): void {
@@ -176,50 +252,44 @@ export class Plot implements AfterViewInit, OnDestroy {
     const offsetX = event.clientX - rect.left;
     const offsetY = event.clientY - rect.top;
 
-    // Check if the mouse is within the plot area bounds
-    if (
-      offsetX < 0 ||
-      offsetX > this.width ||
-      offsetY < 0 ||
-      offsetY > this.height
-    ) {
-      return; // Don't add points outside the plot area
+    if (!this.isPointInBounds(offsetX, offsetY)) {
+      return;
     }
 
-    const x = offsetX - this.width / 2;
-    const y = -(offsetY - this.height / 2);
-    this.points.set([...this.points(), [x, y]]);
-    this.labels.push(null);
+    const x = offsetX - this.width() / 2;
+    const y = -(offsetY - this.height() / 2);
+
+    this.points.update((points) => [...points, [x, y]]);
+    this.labels.update((labels) => [...labels, null]);
   }
 
-  onDeletePoint(index: number): void {
-    const newPoints = [...this.points()];
-    newPoints.splice(index, 1);
-    this.points.set(newPoints);
-    if (this.labels.length > index) this.labels.splice(index, 1);
+  private isPointInBounds(x: number, y: number): boolean {
+    return x >= 0 && x <= this.width() && y >= 0 && y <= this.height();
+  }
+
+  deletePoint(index: number): void {
+    this.points.update((points) => points.filter((_, i) => i !== index));
+    this.labels.update((labels) => labels.filter((_, i) => i !== index));
     this.saveToLocalStorage();
   }
 
   toggleDeleteMode(): void {
-    this.deleteMode = !this.deleteMode;
+    this.deleteMode.update((mode) => !mode);
   }
 
   // --- Mouse Events ---
   onPlotClick(event: MouseEvent): void {
-    if (this.deleteMode) this.tryDeletePointAt(event);
+    if (this.deleteMode()) {
+      this.tryDeletePointAt(event);
+    }
   }
 
   onPlotMouseDown(event: MouseEvent): void {
     event.preventDefault();
-    this.isDrawing = true;
+    this.isDrawing.set(true);
+    this.setupEventListeners();
 
-    // Add document-level event listeners when drawing starts
-    if (isPlatformBrowser(this.platformId)) {
-      document.addEventListener('mousemove', this.boundMouseMove);
-      document.addEventListener('mouseup', this.boundMouseUp);
-    }
-
-    if (this.deleteMode) {
+    if (this.deleteMode()) {
       this.tryDeletePointAt(event);
     } else {
       this.addPointFromMouseEvent(event);
@@ -227,8 +297,9 @@ export class Plot implements AfterViewInit, OnDestroy {
   }
 
   onPlotMouseMove(event: MouseEvent): void {
-    if (!this.isDrawing) return;
-    if (this.deleteMode) {
+    if (!this.isDrawing()) return;
+
+    if (this.deleteMode()) {
       this.tryDeletePointAt(event);
     } else {
       this.addPointFromMouseEvent(event);
@@ -241,9 +312,9 @@ export class Plot implements AfterViewInit, OnDestroy {
 
   // Document-level mouse events
   private onDocumentMouseMove(event: MouseEvent): void {
-    if (!this.isDrawing) return;
+    if (!this.isDrawing()) return;
 
-    if (this.deleteMode) {
+    if (this.deleteMode()) {
       this.tryDeletePointAt(event);
     } else {
       this.addPointFromMouseEvent(event);
@@ -254,46 +325,76 @@ export class Plot implements AfterViewInit, OnDestroy {
     this.stopDrawing();
   }
 
-  private stopDrawing(): void {
-    this.isDrawing = false;
+  private setupEventListeners(): void {
+    if (this.isBrowser()) {
+      document.addEventListener('mousemove', this.boundMouseMove);
+      document.addEventListener('mouseup', this.boundMouseUp);
+    }
+  }
 
-    // Remove document-level event listeners
-    if (isPlatformBrowser(this.platformId)) {
+  private cleanupEventListeners(): void {
+    if (this.isBrowser()) {
       document.removeEventListener('mousemove', this.boundMouseMove);
       document.removeEventListener('mouseup', this.boundMouseUp);
     }
   }
 
+  private stopDrawing(): void {
+    this.isDrawing.set(false);
+    this.cleanupEventListeners();
+  }
+
   // --- UI Actions ---
-  onReset(): void {
+  reset(): void {
     if (confirm('Are you sure you want to delete all points?')) {
       this.points.set([]);
       this.centroids.set([]);
-      this.labels = [];
+      this.labels.set([]);
       this.saveToLocalStorage();
     }
   }
 
   onAlgorithmChange(event: Event): void {
-    this.selectedAlgorithm = (event.target as HTMLSelectElement).value as any;
+    const target = event.target as HTMLSelectElement;
+    this.selectedAlgorithm.set(target.value as AlgorithmType);
   }
 
-  onClustering(): void {
-    if (this.points().length === 0) return;
-    const request: any = {
+  onClusterCountChange(value: string): void {
+    this.clusterCount.set(Number(value));
+  }
+
+  onEpsChange(value: string): void {
+    this.eps.set(Number(value));
+  }
+
+  onMinSamplesChange(value: string): void {
+    this.minSamples.set(Number(value));
+  }
+
+  performClustering(): void {
+    if (this.points().length === 0) {
+      return;
+    }
+
+    const request: ClusterRequest = {
       points: this.points(),
-      algorithm: this.selectedAlgorithm,
-      ...(this.selectedAlgorithm === 'DBSCAN'
-        ? { eps: this.eps, minSamples: this.minSamples }
-        : { k: this.clusterCount }),
+      algorithm: this.selectedAlgorithm(),
+      ...(this.selectedAlgorithm() === 'DBSCAN'
+        ? { eps: this.eps(), minSamples: this.minSamples() }
+        : { k: this.clusterCount() }),
     };
-    this.http.post<any>('http://127.0.0.1:8000/cluster', request).subscribe({
-      next: (response) => {
-        this.centroids.set(response.centroids || []);
-        this.labels = response.labels || [];
-        this.saveToLocalStorage();
-      },
-      error: (error) => console.error('Error during clustering:', error),
-    });
+
+    this.http
+      .post<ClusterResponse>('http://127.0.0.1:8000/cluster', request)
+      .subscribe({
+        next: (response: ClusterResponse) => {
+          this.centroids.set(response.centroids || []);
+          this.labels.set(response.labels || []);
+          this.saveToLocalStorage();
+        },
+        error: (error: Error) => {
+          console.error('Error during clustering: ', error);
+        },
+      });
   }
 }

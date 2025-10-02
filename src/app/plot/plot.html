@@ -9,8 +9,8 @@
       <select
         id="algorithm"
         class="w-48 px-3 py-2 text-box"
-        [(ngModel)]="selectedAlgorithm"
-        (change)="onAlgorithmChange($event)"
+        [ngModel]="selectedAlgorithm()"
+        (ngModelChange)="selectedAlgorithm.set($event)"
       >
         <option value="kmeans">K-Means</option>
         <option value="Agglomerative">Agglomerative</option>
@@ -18,7 +18,7 @@
       </select>
 
       <!-- K-Means/Agglomerative Controls -->
-      <div *ngIf="selectedAlgorithm !== 'DBSCAN'">
+      <div *ngIf="selectedAlgorithm() !== 'DBSCAN'">
         <label for="clusterCount" class="font-medium mb-2"
           >Number of Clusters:</label
         >
@@ -28,21 +28,21 @@
             type="number"
             min="1"
             max="10"
-            [(ngModel)]="clusterCount"
-            (ngModelChange)="clusterCount = Math.max(1, Math.min(10, clusterCount || 1))"
+            [ngModel]="clusterCount()"
+            (ngModelChange)="onClusterCountChange($event)"
             class="w-20 px-3 py-2 text-box"
           />
           <button
-            (click)="clusterCount = clusterCount > 1 ? clusterCount - 1 : 1"
+            (click)="clusterCount.set(Math.max(1, clusterCount() - 1))"
             class="pale-button text-white px-3 py-1 rounded"
-            [disabled]="clusterCount <= 1"
+            [disabled]="clusterCount() <= 1"
           >
             &minus;
           </button>
           <button
-            (click)="clusterCount = clusterCount < 10 ? clusterCount + 1 : 10"
+            (click)="clusterCount.set(Math.min(10, clusterCount() + 1))"
             class="pale-button text-white px-3 py-1 rounded"
-            [disabled]="clusterCount >= 10"
+            [disabled]="clusterCount() >= 10"
           >
             &plus;
           </button>
@@ -50,7 +50,7 @@
       </div>
 
       <!-- DBSCAN Controls -->
-      <div *ngIf="selectedAlgorithm === 'DBSCAN'" class="space-y-4">
+      <div *ngIf="selectedAlgorithm() === 'DBSCAN'" class="space-y-4">
         <div>
           <label for="eps" class="font-medium mb-2">Epsilon (eps):</label>
           <input
@@ -59,8 +59,8 @@
             min="0.1"
             max="50"
             step="0.1"
-            [(ngModel)]="eps"
-            (ngModelChange)="eps = Math.max(0.1, Math.min(50, eps || 0.1))"
+            [ngModel]="eps()"
+            (ngModelChange)="onEpsChange($event)"
             class="w-48 px-3 py-2 text-box"
           />
         </div>
@@ -74,19 +74,19 @@
               id="minSamples"
               type="number"
               min="1"
-              [(ngModel)]="minSamples"
-              (ngModelChange)="minSamples = Math.max(1, minSamples || 1)"
+              [ngModel]="minSamples()"
+              (ngModelChange)="onMinSamplesChange($event)"
               class="w-20 px-3 py-2 text-box"
             />
             <button
-              (click)="minSamples = minSamples > 1 ? minSamples - 1 : 1"
+              (click)="minSamples.set(Math.max(1, minSamples() - 1))"
               class="pale-button text-white px-3 py-1 rounded"
-              [disabled]="minSamples <= 1"
+              [disabled]="minSamples() <= 1"
             >
               &minus;
             </button>
             <button
-              (click)="minSamples = minSamples + 1"
+              (click)="minSamples.set(minSamples() + 1)"
               class="pale-button text-white px-3 py-1 rounded"
             >
               &plus;
@@ -95,23 +95,23 @@
         </div>
       </div>
 
-      <button class="pale-button h-12" (click)="onClustering()">Cluster</button>
+      <button class="pale-button h-12" (click)="performClustering()">Cluster</button>
       <button
         class="pale-button h-12"
-        [class.bg-red-600]="deleteMode"
+        [class.bg-red-600]="deleteMode()"
         (click)="toggleDeleteMode()"
       >
-        {{ deleteMode ? 'Cancel Delete' : 'Delete Points' }}
+        {{ deleteMode() ? 'Cancel Delete' : 'Delete Points' }}
       </button>
-      <button class="pale-button h-12" (click)="onReset()">Reset</button>
+      <button class="pale-button h-12" (click)="reset()">Reset</button>
     </div>
 
     <div
       #plotArea
       class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden shadow"
-      [class.border-primary-500]="!deleteMode"
-      [class.border-red-500]="deleteMode"
-      [class.cursor-crosshair]="deleteMode"
+      [class.border-primary-500]="!deleteMode()"
+      [class.border-red-500]="deleteMode()"
+      [class.cursor-crosshair]="deleteMode()"
       (mousedown)="onPlotMouseDown($event)"
       (click)="onPlotClick($event)"
       (mouseup)="onPlotMouseUp()"
@@ -129,29 +129,30 @@
       ></div>
 
       <!-- Points -->
-      @for (p of points(); track $index) {
+      @for (point of points(); track $index) {
       <div
         class="point absolute size-[8px] rounded-full"
-        [style.left.px]="getPosX(p)"
-        [style.top.px]="getPosY(p)"
-        [ngClass]="getColor($index)"
+        [style.left.px]="getPointPosition(point).x"
+        [style.top.px]="getPointPosition(point).y"
+        [ngClass]="getPointColor($index)"
       ></div>
-      @if (selectedAlgorithm == 'DBSCAN') {
+      @if (selectedAlgorithm() === 'DBSCAN') {
       <div
-        class="point absolute rounded-full opacity-5"
-        [style.left.px]="getPosBorderX(p)"
-        [style.top.px]="getPosBorderY(p)"
-        [style.width.px]="getSize()"
-        [style.height.px]="getSize()"
-        [ngClass]="getColor($index)"
+        class="point absolute rounded-full opacity-1"
+        [style.left.px]="getPointBorderPosition(point).x"
+        [style.top.px]="getPointBorderPosition(point).y"
+        [style.width.px]="pointSize()"
+        [style.height.px]="pointSize()"
+        [ngClass]="getPointColor($index)"
       ></div>
       } }
+      
       <!-- Centroids -->
-      @for (c of centroids(); track $index) {
+      @for (centroid of centroids(); track $index) {
       <div
         class="centroid absolute size-[15px] rounded-full border-2 border-white"
-        [style.left.px]="getPosX(c)"
-        [style.top.px]="getPosY(c)"
+        [style.left.px]="getPointPosition(centroid).x"
+        [style.top.px]="getPointPosition(centroid).y"
         [ngClass]="getCentroidColor($index)"
       ></div>
       }
