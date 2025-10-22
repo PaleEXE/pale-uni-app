@@ -8,9 +8,9 @@
     >
       <select
         id="algorithm"
-        class="w-48 px-3 py-2 text-box"
-        [ngModel]="selectedAlgorithm()"
-        (ngModelChange)="selectedAlgorithm.set($event)"
+        class="w-48 px-3 py-2 text-box bg-primary-400 text-white cursor-pointer hover:bg-primary-500"
+        [value]="selectedAlgorithm()"
+        (change)="selectedAlgorithm.set($any($event.target).value)"
       >
         <option value="kmeans">K-Means</option>
         <option value="Agglomerative">Agglomerative</option>
@@ -18,84 +18,119 @@
       </select>
 
       <!-- K-Means/Agglomerative Controls -->
-      <div *ngIf="selectedAlgorithm() !== 'DBSCAN'">
-        <label for="clusterCount" class="font-medium mb-2"
-          >Number of Clusters:</label
-        >
-        <div class="flex items-center space-x-2">
-          <input
-            id="clusterCount"
-            type="number"
-            min="1"
-            max="10"
-            [ngModel]="clusterCount()"
-            (ngModelChange)="onClusterCountChange($event)"
-            class="w-20 px-3 py-2 text-box"
-          />
-          <button
-            (click)="clusterCount.set(Math.max(1, clusterCount() - 1))"
-            class="pale-button text-white px-3 py-1 rounded"
-            [disabled]="clusterCount() <= 1"
-          >
-            &minus;
-          </button>
-          <button
-            (click)="clusterCount.set(Math.min(10, clusterCount() + 1))"
-            class="pale-button text-white px-3 py-1 rounded"
-            [disabled]="clusterCount() >= 10"
-          >
-            &plus;
-          </button>
-        </div>
-      </div>
-
-      <!-- DBSCAN Controls -->
-      <div *ngIf="selectedAlgorithm() === 'DBSCAN'" class="space-y-4">
+      @if (selectedAlgorithm() !== 'DBSCAN') {
         <div>
-          <label for="eps" class="font-medium mb-2">Epsilon (eps):</label>
-          <input
-            id="eps"
-            type="number"
-            min="0.1"
-            max="50"
-            step="0.1"
-            [ngModel]="eps()"
-            (ngModelChange)="onEpsChange($event)"
-            class="w-48 px-3 py-2 text-box"
-          />
-        </div>
-
-        <div>
-          <label for="minSamples" class="font-medium mb-2"
-            >Minimum Samples:</label
-          >
-          <div class="flex items-center space-x-2">
+          <label for="clusterCount" class="font-medium mb-2 block"
+            >Number of Clusters:
+          </label>
+          <div class="flex items-center space-x-4">
             <input
-              id="minSamples"
-              type="number"
+              id="clusterCount"
+              type="range"
               min="1"
-              [ngModel]="minSamples()"
-              (ngModelChange)="onMinSamplesChange($event)"
-              class="w-20 px-3 py-2 text-box"
+              max="10"
+              step="1"
+              [value]="clusterCount()"
+              (input)="clusterCount.set($any($event.target).valueAsNumber)"
+              class="slider"
             />
-            <button
-              (click)="minSamples.set(Math.max(1, minSamples() - 1))"
-              class="pale-button text-white px-3 py-1 rounded"
-              [disabled]="minSamples() <= 1"
+            <span
+              class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
+              >{{ clusterCount() }}</span
             >
-              &minus;
-            </button>
-            <button
-              (click)="minSamples.set(minSamples() + 1)"
-              class="pale-button text-white px-3 py-1 rounded"
-            >
-              &plus;
-            </button>
           </div>
         </div>
+      }
+
+      <!-- DBSCAN Controls -->
+      @if (selectedAlgorithm() === 'DBSCAN') {
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <label for="eps" class="font-medium flex">Epsilon (eps):</label>
+              <button 
+                (click)="showBorder.set(!showBorder())"
+                class="p-1 rounded hover:bg-primary-200 transition-colors"
+                [class.text-primary-600]="showBorder()"
+                [class.text-primary-400]="!showBorder()"
+                [attr.title]="showBorder() ? 'Hide borders' : 'Show borders'"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M12 16a4 4 0 100-8 4 4 0 000 8z" />
+                </svg>
+              </button>
+            </div>
+            <div class="flex items-center space-x-4">
+              <input
+                id="eps"
+                type="range"
+                min="0.1"
+                max="30.0"
+                step="0.1"
+                [value]="eps()"
+                (input)="eps.set($any($event.target).valueAsNumber)"
+                class="slider"
+              />
+              <span
+                class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
+                >{{ eps().toFixed(1) }}</span
+              >
+            </div>
+          </div>
+
+          <div>
+            <label for="minSamples" class="font-medium mb-2 block"
+              >Minimum Samples:
+            </label>
+            <div class="flex items-center space-x-4">
+              <input
+                id="minSamples"
+                type="range"
+                min="1"
+                max="20"
+                step="1"
+                [value]="minSamples()"
+                (input)="minSamples.set($any($event.target).valueAsNumber)"
+                class="slider"
+              />
+              <span
+                class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
+                >{{ minSamples() }}</span
+              >
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Point Size Slider -->
+      <div>
+        <label for="pointSize" class="font-medium mb-2 block"
+          >Point Size:
+        </label>
+        <div class="flex items-center space-x-4">
+          <input
+            id="pointSize"
+            type="range"
+            min="4"
+            max="20"
+            step="1"
+            [value]="pointSize()"
+            (input)="pointSize.set($any($event.target).valueAsNumber)"
+            class="slider"
+          />
+          <span
+            class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
+            >{{ pointSize() }}</span
+          >
+        </div>
       </div>
 
-      <button class="pale-button h-12" (click)="performClustering()">Cluster</button>
+      <button class="pale-button h-12" (click)="performClustering()">
+        Cluster
+      </button>
       <button
         class="pale-button h-12"
         [class.bg-red-600]="deleteMode()"
@@ -130,31 +165,36 @@
 
       <!-- Points -->
       @for (point of points(); track $index) {
-      <div
-        class="point absolute size-[8px] rounded-full"
-        [style.left.px]="getPointPosition(point).x"
-        [style.top.px]="getPointPosition(point).y"
-        [ngClass]="getPointColor($index)"
-      ></div>
-      @if (selectedAlgorithm() === 'DBSCAN') {
-      <div
-        class="point absolute rounded-full opacity-1"
-        [style.left.px]="getPointBorderPosition(point).x"
-        [style.top.px]="getPointBorderPosition(point).y"
-        [style.width.px]="pointSize()"
-        [style.height.px]="pointSize()"
-        [ngClass]="getPointColor($index)"
-      ></div>
-      } }
-      
+        <div
+          class="absolute rounded-full"
+          [style.left.px]="getPointPosition(point).x"
+          [style.top.px]="getPointPosition(point).y"
+          [style.width.px]="pointSize()"
+          [style.height.px]="pointSize()"
+          [class]="getPointColor($index)"
+        ></div>
+        @if (selectedAlgorithm() === 'DBSCAN' && showBorder()) {
+          <div
+            class="point absolute rounded-full opacity-1"
+            [style.left.px]="getPointBorderPosition(point).x"
+            [style.top.px]="getPointBorderPosition(point).y"
+            [style.width.px]="borderSize()"
+            [style.height.px]="borderSize()"
+            [class]="getPointColor($index)"
+          ></div>
+        }
+      }
+
       <!-- Centroids -->
       @for (centroid of centroids(); track $index) {
-      <div
-        class="centroid absolute size-[15px] rounded-full border-2 border-white"
-        [style.left.px]="getPointPosition(centroid).x"
-        [style.top.px]="getPointPosition(centroid).y"
-        [ngClass]="getCentroidColor($index)"
-      ></div>
+        <div
+          class="absolute rounded-full border-2 border-white"
+          [style.left.px]="getPointPosition(centroid).x - pointSize() / 2"
+          [style.top.px]="getPointPosition(centroid).y - pointSize() / 2"
+          [style.width.px]="pointSize() * 2"
+          [style.height.px]="pointSize() * 2"
+          [class]="getCentroidColor($index)"
+        ></div>
       }
     </div>
   </div>

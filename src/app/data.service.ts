@@ -12,6 +12,7 @@ export const topics = [
     subtopics: ['Plot', 'FP-Growth'],
   },
   { title: 'I D K', subtopics: [] },
+  { title: 'Shaw', description: "GIT GUD", subtopics: ["sui"] },
 ];
 
 export function slugify(text: string) {

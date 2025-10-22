@@ -98,9 +98,11 @@ export class Plot implements AfterViewInit, OnDestroy {
   readonly minSamples = signal(2);
   readonly isDrawing = signal(false);
   readonly deleteMode = signal(false);
+  readonly pointSize = signal(8);
+  readonly showBorder = signal(true);
 
   // Computed values
-  readonly pointSize = computed(() => this.eps() * 4);
+  readonly borderSize = computed(() => this.eps() * 4);
   readonly isBrowser = computed(() => isPlatformBrowser(this.platformId));
 
   // Event handlers with proper typing
@@ -153,9 +155,7 @@ export class Plot implements AfterViewInit, OnDestroy {
       parseNumber(getItem(STORAGE_KEYS.MIN_SAMPLES)) || this.minSamples()
     );
 
-    this.labels.set(
-      parseArray<(number | null)>(getItem(STORAGE_KEYS.LABELS))
-    );
+    this.labels.set(parseArray<number | null>(getItem(STORAGE_KEYS.LABELS)));
     this.points.set(parseArray<Point>(getItem(STORAGE_KEYS.POINTS)));
     this.centroids.set(parseArray<Point>(getItem(STORAGE_KEYS.CENTROIDS)));
   }
@@ -179,13 +179,13 @@ export class Plot implements AfterViewInit, OnDestroy {
   // --- Plotting Helpers ---
   getPointPosition([x, y]: Point): { x: number; y: number } {
     return {
-      x: this.width() / 2 + x - 4,
-      y: this.height() / 2 - y - 4,
+      x: this.width() / 2 + x - this.pointSize() / 2,
+      y: this.height() / 2 - y - this.pointSize() / 2,
     };
   }
 
   getPointBorderPosition([x, y]: Point): { x: number; y: number } {
-    const size = this.pointSize() / 2;
+    const size = this.borderSize() / 2;
     return {
       x: this.width() / 2 + x - size,
       y: this.height() / 2 - y - size,
@@ -357,18 +357,6 @@ export class Plot implements AfterViewInit, OnDestroy {
   onAlgorithmChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     this.selectedAlgorithm.set(target.value as AlgorithmType);
-  }
-
-  onClusterCountChange(value: string): void {
-    this.clusterCount.set(Number(value));
-  }
-
-  onEpsChange(value: string): void {
-    this.eps.set(Number(value));
-  }
-
-  onMinSamplesChange(value: string): void {
-    this.minSamples.set(Number(value));
   }
 
   performClustering(): void {
