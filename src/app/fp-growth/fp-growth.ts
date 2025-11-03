@@ -11,7 +11,6 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as d3 from 'd3';
-import { HierarchyPointLink, HierarchyPointNode } from 'd3-hierarchy';
 
 interface TreeNode {
   name: string;
@@ -40,6 +39,7 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
 
   ngOnInit() {
+    this.transactions = [{ items: 'A B C', count: 1 }];
     if (isPlatformBrowser(this.platformId)) {
       this.loadFromLocalStorage();
       this.width = this.treeArea.nativeElement.clientWidth || 640;
@@ -64,6 +64,7 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onRemoveTransaction(i: number) {
+    if (this.transactions.length <= 1) return;
     this.transactions.splice(i, 1);
     this.saveToLocalStorage();
     this.onUpdateTree();

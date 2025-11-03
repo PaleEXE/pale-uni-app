@@ -41,6 +41,12 @@ export class LogicEvaluator {
     if (expression === this.lastExp) {
       return;
     }
+    if (expression.toLowerCase() === 'mimi') {
+      this.errMsg.set('MIMI is always True');
+      this.headers.set([]);
+      this.data.set([]);
+      return;
+    }
     this.lastExp = expression;
     this.http
       .post<any>('http://127.0.0.1:8000/evaluate', { expression })

@@ -13,14 +13,14 @@
               type="text"
               placeholder="Items (space separated)"
               [(ngModel)]="tx.items"
-              class="w-48 px-3 py-2 text-box"
+              class="w-48 px-3 py-2 text-box bg-primary-400 text-white hover:bg-primary-500"
             />
             <input
               type="number"
               min="1"
               placeholder="Count"
               [(ngModel)]="tx.count"
-              class="w-12 px-3 py-2 text-box"
+              class="w-12 px-3 py-2 text-box bg-primary-400 text-white hover:bg-primary-500"
             />
             <button
               (click)="onRemoveTransaction(i)"
