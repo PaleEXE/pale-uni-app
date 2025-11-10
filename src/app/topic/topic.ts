@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { topics, slugify } from '../data.service'; // adjust path as needed
+import { topics, slugify } from '../services/data.service'; // adjust path as needed
 
 @Component({
   selector: 'app-topic',

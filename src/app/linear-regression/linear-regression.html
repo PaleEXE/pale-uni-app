@@ -1,0 +1,20 @@
+<div class="flex flex-col md:flex-row gap-6 p-4">
+  <!-- Plot area -->
+  <div class="flex-1">
+    <div #plotArea class="border border-gray-300 w-full h-96"></div>
+    <div class="flex justify-between mt-2">
+      <button class="px-4 py-2 bg-gray-200 rounded" (click)="back()">Back</button>
+      <button class="px-4 py-2 bg-blue-500 text-white rounded" (click)="calculateRegression()">Next</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="w-64 p-4 border border-gray-300 rounded bg-white">
+    <h2 class="text-lg font-semibold mb-2">Linear Regression Stats</h2>
+    <p><strong>Slope:</strong> {{ slope() | number:'1.2-2' }}</p>
+    <p><strong>Intercept:</strong> {{ intercept() | number:'1.2-2' }}</p>
+    <p><strong>MSE:</strong> {{ mse() | number:'1.2-2' }}</p>
+    <p><strong>Iteration:</strong> {{ iteration() }}</p>
+    <p><strong>Points Count:</strong> {{ points().length }}</p>
+  </div>
+</div>

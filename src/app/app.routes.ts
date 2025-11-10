@@ -4,6 +4,7 @@ import { LogicEvaluator } from './logic-evaluator/logic-evaluator';
 import { Topic } from './topic/topic';
 import { Plot } from './plot/plot';
 import { FPGrowth } from './fp-growth/fp-growth';
+import { LinearRegression } from './linear-regression/linear-regression';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -24,5 +25,9 @@ export const routes: Routes = [
   {
     path: 'topic/:topicId/fp-growth',
     component: FPGrowth,
+  },
+  {
+    path: 'topic/:topicId/linear-regression',
+    component: LinearRegression,
   },
 ];

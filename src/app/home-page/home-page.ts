@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { topics, slugify } from '../data.service';
+import { topics, slugify } from '../services/data.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
