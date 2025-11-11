@@ -1,20 +1,105 @@
-<div class="flex flex-col md:flex-row gap-6 p-4">
-  <!-- Plot area -->
-  <div class="flex-1">
-    <div #plotArea class="border border-gray-300 w-full h-96"></div>
-    <div class="flex justify-between mt-2">
-      <button class="px-4 py-2 bg-gray-200 rounded" (click)="back()">Back</button>
-      <button class="px-4 py-2 bg-blue-500 text-white rounded" (click)="calculateRegression()">Next</button>
-    </div>
+<div class="flex flex-col justify-center items-center h-full">
+  <div class="flex justify-center items-center h-6 mb-8 mt-6">
+    <h1 class="text-3xl font-bold text-primary-700">Linear Regression</h1>
   </div>
+  <div class="flex">
+    <!-- Sidebar Controls -->
+    <div
+      class="flex flex-col gap-6 m-6 w-64 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow"
+    >
+      <div>
+        <h2 class="text-lg font-semibold mb-4 text-primary-700">Statistics</h2>
+        <div class="space-y-3">
+          <div
+            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
+          >
+            <p class="text-sm text-primary-600"><strong>Slope:</strong></p>
+            <p class="text-lg font-bold text-primary-700">
+              {{ slope() | number:'1.2-2' }}
+            </p>
+          </div>
+          <div
+            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
+          >
+            <p class="text-sm text-primary-600"><strong>Intercept:</strong></p>
+            <p class="text-lg font-bold text-primary-700">
+              {{ intercept() | number:'1.2-2' }}
+            </p>
+          </div>
+          <div
+            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
+          >
+            <p class="text-sm text-primary-600"><strong>MSE:</strong></p>
+            <p class="text-lg font-bold text-primary-700">
+              {{ mse() | number:'1.2-2' }}
+            </p>
+          </div>
+          <div
+            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
+          >
+            <p class="text-sm text-primary-600">
+              <strong>Points Count:</strong>
+            </p>
+            <p class="text-lg font-bold text-primary-700">
+              {{ points().length }}
+            </p>
+          </div>
+        </div>
+      </div>
 
-  <!-- Sidebar -->
-  <div class="w-64 p-4 border border-gray-300 rounded bg-white">
-    <h2 class="text-lg font-semibold mb-2">Linear Regression Stats</h2>
-    <p><strong>Slope:</strong> {{ slope() | number:'1.2-2' }}</p>
-    <p><strong>Intercept:</strong> {{ intercept() | number:'1.2-2' }}</p>
-    <p><strong>MSE:</strong> {{ mse() | number:'1.2-2' }}</p>
-    <p><strong>Iteration:</strong> {{ iteration() }}</p>
-    <p><strong>Points Count:</strong> {{ points().length }}</p>
+      <button class="pale-button h-12" (click)="calculateRegression()">
+        Calculate
+      </button>
+      <button class="pale-button h-12" (click)="reset()">Reset</button>
+    </div>
+
+    <!-- Plot Area -->
+    <div
+      #plotArea
+      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg overflow-hidden shadow"
+      (mousedown)="onPlotMouseDown($event)"
+      (click)="onPlotClick($event)"
+      (mouseup)="onPlotMouseUp()"
+      (mouseleave)="onPlotMouseUp()"
+      (mousemove)="onPlotMouseMove($event)"
+    >
+      <!-- Y-Axis (Vertical line in center) -->
+      <div
+        class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary-300 -translate-x-1/2"
+      ></div>
+
+      <!-- X-Axis (Horizontal line in center) -->
+      <div
+        class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-300 -translate-y-1/2"
+      ></div>
+
+      <!-- Points -->
+      @for (point of points(); track $index) {
+      <div
+        class="absolute rounded-full bg-primary-500 border-2 border-primary-700 shadow-md hover:shadow-lg transition-shadow"
+        [style.width.px]="8"
+        [style.height.px]="8"
+        [style.left.px]="getPosX(point)"
+        [style.top.px]="getPosY(point)"
+      ></div>
+      }
+
+      <!-- Regression Line -->
+      @if (slope() !== 0 || intercept() !== 0) {
+      <svg
+        class="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+      >
+        <line
+          [attr.x1]="0"
+          [attr.y1]="getRegressionLineY(0)"
+          [attr.x2]="width()"
+          [attr.y2]="getRegressionLineY(width())"
+          stroke="rgb(239, 68, 68)"
+          stroke-width="2"
+          stroke-dasharray="5,5"
+        />
+      </svg>
+      }
+    </div>
   </div>
 </div>

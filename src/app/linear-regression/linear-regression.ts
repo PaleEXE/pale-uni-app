@@ -1,6 +1,15 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, signal } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Location } from '@angular/common';
+
+type Point = [number, number];
 
 @Component({
   selector: 'app-linear-regression',
@@ -10,161 +19,163 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, FormsModule],
 })
 export class LinearRegression implements AfterViewInit {
-  @ViewChild('plotArea', { static: true }) plotAreaRef!: ElementRef<HTMLDivElement>;
-  ctx!: CanvasRenderingContext2D;
+  @ViewChild('plotArea') plotAreaRef!: ElementRef<HTMLDivElement>;
 
-  points = signal<[number, number][]>([]);
-  slope = signal(0);
-  intercept = signal(0);
-  mse = signal(0);
-  step = signal<'draw' | 'line'>('draw');
-  iteration = signal(0);
+  readonly width = signal(0);
+  readonly height = signal(0);
+  readonly points = signal<Point[]>([]);
+  readonly slope = signal(0);
+  readonly intercept = signal(0);
+  readonly mse = signal(0);
+  readonly isDrawing = signal(false);
 
-  // Gradient descent internal state
-  private currentSlope = 0;
-  private currentIntercept = 0;
-  private xs: number[] = [];
-  private ys: number[] = [];
-  private learningRate = 0.001;
-  // Manual line inputs
-  manualSlope =0;
-  manualIntercept=0;
+  constructor(private location: Location) {}
 
   ngAfterViewInit(): void {
-    const canvasDiv = this.plotAreaRef.nativeElement;
-    const width = canvasDiv.offsetWidth;
-    const height = canvasDiv.offsetHeight;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    canvasDiv.appendChild(canvas);
-
-    this.ctx = canvas.getContext('2d')!;
-
-    // White background
-    this.ctx.fillStyle =  'white';
-    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    canvas.addEventListener('click', (event) => this.addPoint(event));
-
-    this.clearCanvas();
-  }
-  
-  applyManualLine() {
-    if (this.manualSlope === null || this.manualIntercept === null) {
-    alert('⚠️ Please enter both slope (m) and intercept (b) before drawing.');
-    return; //this part didnt work with me 
-  } 
-    this.currentSlope = this.manualSlope;
-    this.currentIntercept = this.manualIntercept;
-    this.drawRegressionLine();
-    this.step.set('line');
+    const el = this.plotAreaRef.nativeElement;
+    this.width.set(el.offsetWidth);
+    this.height.set(el.offsetHeight);
   }
 
-  addPoint(event: MouseEvent) {
-    if (this.step() !== 'draw') return;
-
-    const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    this.points.update(p => [...p, [x, y]]);
-    this.drawPoints();
+  // --- Plotting Helpers ---
+  getPosX([x]: Point): number {
+    return this.width() / 2 + x - 4;
   }
 
-  drawPoints() {
-    this.clearCanvas();
-    this.points().forEach(([x, y]) => {
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, 5, 0, Math.PI * 2);
-      this.ctx.fillStyle = 'blue';
-      this.ctx.fill();
+  getPosY([, y]: Point): number {
+    return this.height() / 2 - y - 4;
+  }
+
+  getRegressionLineY(x: number): number {
+    if (this.width() === 0) return 0;
+    const dataX = x - this.width() / 2;
+    const dataY = this.slope() * dataX + this.intercept();
+    return this.height() / 2 - dataY;
+  }
+
+  // --- Point Management ---
+  private tryDeletePointAt(event: MouseEvent): void {
+    const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    let closestIndex = -1;
+    let minDistance = Infinity;
+
+    this.points().forEach((point: Point, index: number) => {
+      const posX = this.getPosX(point);
+      const posY = this.getPosY(point);
+      const dx = clickX - posX;
+      const dy = clickY - posY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance && distance < 20) {
+        minDistance = distance;
+        closestIndex = index;
+      }
     });
+
+    if (closestIndex >= 0) {
+      this.onDeletePoint(closestIndex);
+    }
   }
 
-  clearCanvas() {
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    this.ctx.fillStyle = 'white';
-    this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+  private addPointFromMouseEvent(event: MouseEvent): void {
+    const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+
+    const x = offsetX - this.width() / 2;
+    const y = -(offsetY - this.height() / 2);
+
+    this.points.set([...this.points(), [x, y]]);
   }
 
-  drawRegressionLine() {
-    this.drawPoints();
-
-    const canvasWidth = this.ctx.canvas.width;
-    const y1 = this.currentIntercept;
-    const y2 = this.currentSlope * canvasWidth + this.currentIntercept;
-
-    // Draw red regression line
-    this.ctx.beginPath();
-    this.ctx.moveTo(0, y1);
-    this.ctx.lineTo(canvasWidth, y2);
-    this.ctx.strokeStyle = 'red';
-    this.ctx.lineWidth = 2;
-    this.ctx.stroke();
-
-    // Draw slope and intercept as text
-    this.ctx.fillStyle = 'black';
-    this.ctx.font = '16px Arial';
-    const slopeText = `y = ${this.currentSlope.toFixed(2)}x + ${this.currentIntercept.toFixed(2)}`;
-    this.ctx.fillText(slopeText, 10, 20);
-
-    // Draw iteration number
-    const iterText = `Iteration: ${this.iteration()}`;
-    this.ctx.fillText(iterText, 10, 40);
+  onDeletePoint(index: number): void {
+    const newPoints = [...this.points()];
+    newPoints.splice(index, 1);
+    this.points.set(newPoints);
   }
 
-  // Advance one trial of gradient descent
-  calculateRegression() {
-    if (this.points().length < 2) return;
+  // --- Mouse Events ---
+  onPlotMouseDown(event: MouseEvent): void {
+    event.preventDefault();
+    this.isDrawing.set(true);
+    this.addPointFromMouseEvent(event);
+  }
 
-    // Initialize once
-    if (this.step() === 'draw') {
-      this.xs = this.points().map(p => p[0]);
-      this.ys = this.points().map(p => p[1]);
-      this.currentSlope = 0;
-      this.currentIntercept = 0;
-      this.iteration.set(0);
-      this.step.set('line');
+  onPlotMouseMove(event: MouseEvent): void {
+    if (!this.isDrawing()) return;
+    this.addPointFromMouseEvent(event);
+  }
+
+  onPlotMouseUp(): void {
+    this.isDrawing.set(false);
+  }
+
+  onPlotClick(event: MouseEvent): void {
+    if (!this.isDrawing()) {
+      this.addPointFromMouseEvent(event);
+    }
+  }
+
+  // --- Regression Calculation ---
+  calculateRegression(): void {
+    if (this.points().length < 2) {
+      alert('Please add at least 2 points');
+      return;
     }
 
-    const n = this.xs.length;
+    const xs = this.points().map((p) => p[0]);
+    const ys = this.points().map((p) => p[1]);
 
-    // Compute gradients
-    let gradientM = 0;
-    let gradientB = 0;
-    for (let i = 0; i < n; i++) {
-      const yPred = this.currentSlope * this.xs[i] + this.currentIntercept;
-      const error = yPred - this.ys[i];
-      gradientM += (2 / n) * error * this.xs[i];
-      gradientB += (2 / n) * error;
+    // Least squares method
+    const n = xs.length;
+    const sumX = xs.reduce((a, b) => a + b, 0);
+    const sumY = ys.reduce((a, b) => a + b, 0);
+    const sumXY = xs.reduce((sum, x, i) => sum + x * ys[i], 0);
+    const sumX2 = xs.reduce((sum, x) => sum + x * x, 0);
+
+    const denominator = n * sumX2 - sumX * sumX;
+    if (denominator === 0) {
+      alert('Cannot calculate regression (vertical line)');
+      return;
     }
 
-    // Update slope and intercept
-    this.currentSlope -= this.learningRate * gradientM;
-    this.currentIntercept -= this.learningRate * gradientB;
+    const slope = (n * sumXY - sumX * sumY) / denominator;
+    const intercept = (sumY - slope * sumX) / n;
 
-    // Update MSE here .
-    const mseVal = this.ys.reduce(
-      (acc, y, i) => acc + Math.pow(y - (this.currentSlope * this.xs[i] + this.currentIntercept), 2),
-      0
-    ) / n;
-
-    this.slope.set(this.currentSlope);
-    this.intercept.set(this.currentIntercept);
-    this.mse.set(mseVal);
-
-    this.iteration.update(i => i + 1);
-
-    this.drawRegressionLine();
+    this.slope.set(slope);
+    this.intercept.set(intercept);
+    this.calculateMSE();
   }
 
-  back() {
-    this.step.set('draw');
-    this.currentSlope = 0;
-    this.currentIntercept = 0;
-    this.iteration.set(0);
-    this.drawPoints();
+  private calculateMSE(): void {
+    if (this.points().length === 0) {
+      this.mse.set(0);
+      return;
+    }
+
+    const sumSquaredErrors = this.points().reduce((sum, [x, y]) => {
+      const predicted = this.slope() * x + this.intercept();
+      const error = y - predicted;
+      return sum + error * error;
+    }, 0);
+
+    this.mse.set(sumSquaredErrors / this.points().length);
+  }
+
+  // --- UI Actions ---
+  back(): void {
+    this.location.back();
+  }
+
+  reset(): void {
+    if (confirm('Are you sure you want to clear all points?')) {
+      this.points.set([]);
+      this.slope.set(0);
+      this.intercept.set(0);
+      this.mse.set(0);
+    }
   }
 }
