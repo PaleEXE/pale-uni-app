@@ -25,9 +25,9 @@ A stunning visual playground for exploring AI algorithms through interactive vis
 | ------------------------------- |
 |![FPGrowth](gh_imgs/FPGrowth2.png) |
 
-| Linear Regression Visualizer |
-|------------------------------|
-| ![Linear Regression]()       |
+| Linear Regression Visualizer             |
+|------------------------------------------|
+| ![Linear Regression](gh_imgs/LinReg.png) |
 
 ## 🚀 Quick Start
 
