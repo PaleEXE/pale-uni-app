@@ -1,5 +1,0 @@
-{
-  "css.customData": [".vscode/tailwind.json"],
-  "css.lint.unknownAtRules": "ignore",
-  "cSpell.words": ["DBSCAN", "kmeans", "kmedoids", "Medoids"]
-}
