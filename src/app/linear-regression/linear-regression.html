@@ -1,7 +1,9 @@
 <div class="flex flex-col justify-center items-center h-full">
+  <!-- Header -->
   <div class="flex justify-center items-center h-6 mb-8 mt-6">
     <h1 class="text-3xl font-bold text-primary-700">Linear Regression</h1>
   </div>
+
   <div class="flex">
     <!-- Sidebar Controls -->
     <div
@@ -47,6 +49,7 @@
         </div>
       </div>
 
+      <!-- Buttons -->
       <button class="pale-button h-12" (click)="calculateRegression()">
         Calculate
       </button>
@@ -56,49 +59,48 @@
     <!-- Plot Area -->
     <div
       #plotArea
-      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg overflow-hidden shadow"
+      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden shadow"
+      [class.border-primary-500]="true"
       (mousedown)="onPlotMouseDown($event)"
       (click)="onPlotClick($event)"
       (mouseup)="onPlotMouseUp()"
       (mouseleave)="onPlotMouseUp()"
       (mousemove)="onPlotMouseMove($event)"
     >
-      <!-- Y-Axis (Vertical line in center) -->
+      <!-- Y-Axis -->
       <div
         class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary-300 -translate-x-1/2"
       ></div>
 
-      <!-- X-Axis (Horizontal line in center) -->
+      <!-- X-Axis -->
       <div
         class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-300 -translate-y-1/2"
       ></div>
 
       <!-- Points -->
       @for (point of points(); track $index) {
-      <div
-        class="absolute rounded-full bg-primary-500 border-2 border-primary-700 shadow-md hover:shadow-lg transition-shadow"
-        [style.width.px]="8"
-        [style.height.px]="8"
-        [style.left.px]="getPosX(point)"
-        [style.top.px]="getPosY(point)"
-      ></div>
+        <div
+          class="absolute rounded-full bg-primary-500 border-2 border-primary-700 shadow-md hover:shadow-lg transition-shadow"
+          [style.width.px]="8"
+          [style.height.px]="8"
+          [style.left.px]="getPosX(point)"
+          [style.top.px]="getPosY(point)"
+        ></div>
       }
 
       <!-- Regression Line -->
       @if (slope() !== 0 || intercept() !== 0) {
-      <svg
-        class="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-      >
-        <line
-          [attr.x1]="0"
-          [attr.y1]="getRegressionLineY(0)"
-          [attr.x2]="width()"
-          [attr.y2]="getRegressionLineY(width())"
-          stroke="rgb(239, 68, 68)"
-          stroke-width="2"
-          stroke-dasharray="5,5"
-        />
-      </svg>
+        <svg class="absolute inset-0 w-full h-full pointer-events-none">
+          <line
+            [attr.x1]="getPosX([-width()/2, 0])"
+            [attr.y1]="getPosY([-width()/2, slope()*(-width()/2) + intercept()])"
+            [attr.x2]="getPosX([width()/2, 0])"
+            [attr.y2]="getPosY([width()/2, slope()*(width()/2) + intercept()])"
+            stroke="rgb(239, 68, 68)"
+            stroke-width="2"
+            stroke-dasharray="5,5"
+          />
+        </svg>
       }
     </div>
   </div>

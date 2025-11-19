@@ -27,6 +27,8 @@ export class LinearRegression implements AfterViewInit {
   readonly slope = signal(0);
   readonly intercept = signal(0);
   readonly mse = signal(0);
+  readonly iteration = signal(0);
+  readonly learningRate = signal(0.0001);
   readonly isDrawing = signal(false);
 
   constructor(private location: Location) {}
@@ -129,7 +131,7 @@ export class LinearRegression implements AfterViewInit {
     const xs = this.points().map((p) => p[0]);
     const ys = this.points().map((p) => p[1]);
 
-    // Least squares method
+    // Ordinary least squares method
     const n = xs.length;
     const sumX = xs.reduce((a, b) => a + b, 0);
     const sumY = ys.reduce((a, b) => a + b, 0);
@@ -150,6 +152,7 @@ export class LinearRegression implements AfterViewInit {
     this.calculateMSE();
   }
 
+  // --- MSE Calculation ---
   private calculateMSE(): void {
     if (this.points().length === 0) {
       this.mse.set(0);
@@ -176,6 +179,7 @@ export class LinearRegression implements AfterViewInit {
       this.slope.set(0);
       this.intercept.set(0);
       this.mse.set(0);
+      this.iteration.set(0);
     }
   }
 }
