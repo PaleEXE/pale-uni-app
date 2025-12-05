@@ -4,8 +4,8 @@ import {
   ElementRef,
   AfterViewInit,
   signal,
+  effect,
 } from '@angular/core';
-
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Location } from '@angular/common';
@@ -30,24 +30,82 @@ export class Graph implements AfterViewInit {
   @ViewChild('plotArea')
   plotAreaRef!: ElementRef<HTMLDivElement>;
 
+  //--------------------------
+  // Layout
+  //--------------------------
+
   readonly width = signal(0);
   readonly height = signal(0);
+
+  //--------------------------
+  // Graph Data
+  //--------------------------
 
   readonly nodes = signal<GraphNode[]>([]);
   readonly edges = signal<[number, number][]>([]);
 
+  private nextNodeId = 0;
+
+  //--------------------------
+  // UI State
+  //--------------------------
+
   readonly deleteMode = signal(false);
   readonly linkMode = signal(false);
-
   readonly selectedNodeId = signal<number | null>(null);
 
-  readonly nodeSize = signal(12);
+  readonly nodeSize = signal(32);
+
+  //--------------------------
+  // Drag
+  //--------------------------
 
   readonly draggingNodeId = signal<number | null>(null);
 
-  private nextNodeId = 0;
+  //--------------------------
+  // Algorithms
+  //--------------------------
 
-  constructor(private location: Location) {}
+  readonly startNodeId = signal<number | null>(null);
+
+  // ✅ ngModel <-> signal sync variable
+  startNodeModel: number | null = null;
+
+  readonly dfsResult = signal<number[]>([]);
+  readonly bfsResult = signal<number[]>([]);
+  readonly algorithmMessage = signal('');
+
+  //--------------------------
+  // Label Management
+  //--------------------------
+
+  readonly editingNodeId = signal<number | null>(null);
+  readonly editingLabel = signal('');
+
+  constructor(private location: Location) {
+    // ✅ Auto-sync model with startNodeId signal
+    effect(() => {
+      this.startNodeModel = this.startNodeId();
+    });
+
+    // ✅ Auto-select first node when graph changes
+    effect(() => {
+      const list = this.nodes();
+
+      if (list.length > 0 && this.startNodeId() === null) {
+        this.setStartNode(list[0].id);
+      }
+
+      if (list.length === 0) {
+        this.startNodeId.set(null);
+        this.startNodeModel = null;
+      }
+    });
+  }
+
+  // ======================================================
+  // INIT
+  // ======================================================
 
   ngAfterViewInit(): void {
     const el = this.plotAreaRef.nativeElement;
@@ -55,9 +113,9 @@ export class Graph implements AfterViewInit {
     this.height.set(el.offsetHeight);
   }
 
-  // ======================
-  // Position Helpers
-  // ======================
+  // ======================================================
+  // POSITIONING
+  // ======================================================
 
   getPosX([x]: Point): number {
     return this.width() / 2 + x - this.nodeSize() / 2;
@@ -68,66 +126,123 @@ export class Graph implements AfterViewInit {
   }
 
   private screenToGraph(screenX: number, screenY: number): Point {
-    const x = screenX - this.width() / 2;
-    const y = this.height() / 2 - screenY;
-
-    return [x, y];
+    return [screenX - this.width() / 2, this.height() / 2 - screenY];
   }
 
   getNodeById(id: number): GraphNode | undefined {
     return this.nodes().find((n) => n.id === id);
   }
 
+  // ======================================================
+  // HIT TESTING
+  // ======================================================
+
   private findNodeAtPosition(
     screenX: number,
     screenY: number
   ): GraphNode | null {
+    const r = this.nodeSize() / 2;
+
     for (const node of this.nodes()) {
-      const posX = this.getPosX(node.pos);
-      const posY = this.getPosY(node.pos);
+      const x = this.getPosX(node.pos) + r;
+      const y = this.getPosY(node.pos) + r;
 
-      const dx = screenX - (posX + this.nodeSize() / 2);
-      const dy = screenY - (posY + this.nodeSize() / 2);
+      const dx = screenX - x;
+      const dy = screenY - y;
 
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < this.nodeSize() / 2 + 5) return node;
+      if (Math.hypot(dx, dy) <= r + 4) return node;
     }
 
     return null;
   }
 
-  // ======================
-  // Node Management
-  // ======================
+  // ======================================================
+  // NODE MANAGEMENT
+  // ======================================================
 
   private addNodeAtPosition(screenX: number, screenY: number): void {
     const pos = this.screenToGraph(screenX, screenY);
-
     const id = this.nextNodeId++;
 
-    this.nodes.set([
-      ...this.nodes(),
-      {
-        id,
-        label: `N${id}`,
-        pos,
-        neighbors: [],
-      },
-    ]);
+    const label = String.fromCharCode(65 + (id % 26));
+
+    const newNode: GraphNode = {
+      id,
+      label,
+      pos,
+      neighbors: [],
+    };
+
+    this.nodes.set([...this.nodes(), newNode]);
   }
 
   private deleteNode(nodeId: number): void {
     this.nodes.set(this.nodes().filter((n) => n.id !== nodeId));
-
     this.edges.set(
-      this.edges().filter(([from, to]) => from !== nodeId && to !== nodeId)
+      this.edges().filter(([a, b]) => a !== nodeId && b !== nodeId)
     );
+
+    if (this.startNodeId() === nodeId) {
+      this.startNodeId.set(null);
+    }
   }
 
-  // ======================
-  // Edge Logic
-  // ======================
+  onStartNodeChange(id: number | null | undefined): void {
+    console.log('Start node changed:', id);
+    if (id == null) return;
+
+    // Convert to number if it's a string (ngModel can return strings)
+    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+    if (isNaN(numId)) return;
+
+    this.startNodeId.set(numId);
+    this.startNodeModel = numId;
+
+    this.dfsResult.set([]);
+    this.bfsResult.set([]);
+
+    this.algorithmMessage.set(`Start node set to ${numId}`);
+  }
+
+  // ======================================================
+  // LABEL MANAGEMENT
+  // ======================================================
+
+  startEditingLabel(nodeId: number): void {
+    const node = this.getNodeById(nodeId);
+    if (!node) return;
+
+    this.editingNodeId.set(nodeId);
+    this.editingLabel.set(node.label);
+  }
+
+  saveLabel(): void {
+    const nodeId = this.editingNodeId();
+    if (nodeId === null) return;
+
+    const newLabel = this.editingLabel().trim().toUpperCase();
+    if (!newLabel) {
+      this.cancelEditingLabel();
+      return;
+    }
+
+    this.nodes.set(
+      this.nodes().map((n) => (n.id === nodeId ? { ...n, label: newLabel } : n))
+    );
+
+    this.editingNodeId.set(null);
+    this.editingLabel.set('');
+  }
+
+  cancelEditingLabel(): void {
+    this.editingNodeId.set(null);
+    this.editingLabel.set('');
+  }
+
+  // ======================================================
+  // EDGE MANAGEMENT
+  // ======================================================
 
   private tryCreateEdge(nodeId: number): void {
     if (this.selectedNodeId() === null) {
@@ -140,26 +255,25 @@ export class Graph implements AfterViewInit {
       return;
     }
 
-    const fromId = this.selectedNodeId()!;
-    const toId = nodeId;
+    const from = this.selectedNodeId()!;
+    const to = nodeId;
 
     const exists = this.edges().some(
-      ([a, b]) => (a === fromId && b === toId) || (a === toId && b === fromId)
+      ([a, b]) => (a === from && b === to) || (a === to && b === from)
     );
 
     if (!exists) {
-      this.edges.set([...this.edges(), [fromId, toId]]);
+      this.edges.set([...this.edges(), [from, to]]);
     }
 
     this.selectedNodeId.set(null);
   }
 
-  // ======================
-  // DRAG HANDLING
-  // ======================
+  // ======================================================
+  // DRAGGING
+  // ======================================================
 
   onNodeMouseDown(event: MouseEvent, nodeId: number): void {
-    // Don't drag while linking or deleting
     if (this.linkMode() || this.deleteMode()) return;
 
     event.preventDefault();
@@ -169,20 +283,17 @@ export class Graph implements AfterViewInit {
   }
 
   onPlotMouseMove(event: MouseEvent): void {
-    if (this.draggingNodeId() === null) return;
+    const dragId = this.draggingNodeId();
+    if (dragId === null) return;
 
     const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
-
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
     const newPos = this.screenToGraph(x, y);
 
-    // Update node position immutably (signals)
     this.nodes.set(
-      this.nodes().map((n) =>
-        n.id === this.draggingNodeId() ? { ...n, pos: newPos } : n
-      )
+      this.nodes().map((n) => (n.id === dragId ? { ...n, pos: newPos } : n))
     );
   }
 
@@ -190,9 +301,9 @@ export class Graph implements AfterViewInit {
     this.draggingNodeId.set(null);
   }
 
-  // ======================
-  // Plot Click
-  // ======================
+  // ======================================================
+  // CLICK HANDLING
+  // ======================================================
 
   onPlotClick(event: MouseEvent): void {
     if (this.draggingNodeId() !== null) return;
@@ -202,24 +313,26 @@ export class Graph implements AfterViewInit {
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
-    const clickedNode = this.findNodeAtPosition(x, y);
+    const hit = this.findNodeAtPosition(x, y);
 
-    if (this.deleteMode() && clickedNode) {
-      this.deleteNode(clickedNode.id);
+    if (this.deleteMode() && hit) {
+      this.deleteNode(hit.id);
       return;
     }
 
-    if (this.linkMode() && clickedNode) {
-      this.tryCreateEdge(clickedNode.id);
+    if (this.linkMode() && hit) {
+      this.tryCreateEdge(hit.id);
       return;
     }
 
-    if (!clickedNode) this.addNodeAtPosition(x, y);
+    if (!hit) {
+      this.addNodeAtPosition(x, y);
+    }
   }
 
-  // ======================
-  // UI + Helpers
-  // ======================
+  // ======================================================
+  // UI CONTROLS
+  // ======================================================
 
   toggleDeleteMode(): void {
     this.deleteMode.update((v) => !v);
@@ -233,28 +346,140 @@ export class Graph implements AfterViewInit {
   toggleLinkMode(): void {
     this.linkMode.update((v) => !v);
 
-    if (this.linkMode()) this.deleteMode.set(false);
+    if (this.linkMode()) {
+      this.deleteMode.set(false);
+    }
 
     this.selectedNodeId.set(null);
-  }
-
-  getEdgePath(
-    fromNode: GraphNode | undefined,
-    toNode: GraphNode | undefined
-  ): string {
-    if (!fromNode || !toNode) return '';
-    const x1 = this.getPosX(fromNode.pos) + this.nodeSize() / 2;
-    const y1 = this.getPosY(fromNode.pos) + this.nodeSize() / 2;
-
-    const x2 = this.getPosX(toNode.pos) + this.nodeSize() / 2;
-    const y2 = this.getPosY(toNode.pos) + this.nodeSize() / 2;
-
-    return `M ${x1} ${y1} L ${x2} ${y2}`;
   }
 
   isNodeSelected(id: number): boolean {
     return this.selectedNodeId() === id;
   }
+
+  // ======================================================
+  // SVG EDGES
+  // ======================================================
+
+  getEdgePath(from: GraphNode | undefined, to: GraphNode | undefined): string {
+    if (!from || !to) return '';
+
+    const x1 = this.getPosX(from.pos) + this.nodeSize() / 2;
+    const y1 = this.getPosY(from.pos) + this.nodeSize() / 2;
+
+    const x2 = this.getPosX(to.pos) + this.nodeSize() / 2;
+    const y2 = this.getPosY(to.pos) + this.nodeSize() / 2;
+
+    return `M ${x1} ${y1} L ${x2} ${y2}`;
+  }
+
+  // ======================================================
+  // GRAPH ALGORITHMS
+  // ======================================================
+
+  private buildAdjacencyList(): Map<number, number[]> {
+    const adj = new Map<number, number[]>();
+
+    for (const n of this.nodes()) {
+      adj.set(n.id, []);
+    }
+
+    for (const [a, b] of this.edges()) {
+      adj.get(a)!.push(b);
+      adj.get(b)!.push(a);
+    }
+
+    return adj;
+  }
+
+  private dfs(startId: number): number[] {
+    const adj = this.buildAdjacencyList();
+    const visited = new Set<number>();
+    const result: number[] = [];
+
+    const visit = (id: number) => {
+      visited.add(id);
+      result.push(id);
+
+      for (const n of adj.get(id) ?? []) {
+        if (!visited.has(n)) {
+          visit(n);
+        }
+      }
+    };
+
+    visit(startId);
+    this.algorithmMessage.set('DFS traversal completed.');
+    return result;
+  }
+
+  private bfs(startId: number): number[] {
+    const adj = this.buildAdjacencyList();
+
+    const visited = new Set<number>();
+    const result: number[] = [];
+    const queue: number[] = [startId];
+
+    visited.add(startId);
+
+    while (queue.length) {
+      const id = queue.shift()!;
+      result.push(id);
+
+      for (const n of adj.get(id) ?? []) {
+        if (!visited.has(n)) {
+          visited.add(n);
+          queue.push(n);
+        }
+      }
+    }
+
+    this.algorithmMessage.set('BFS traversal completed.');
+    return result;
+  }
+
+  performDFS(): void {
+    console.log(this.startNodeId());
+    if (!this.nodes().length) {
+      this.algorithmMessage.set('Please add nodes first.');
+      return;
+    }
+
+    const start = this.startNodeId() ?? this.nodes()[0].id;
+
+    this.setStartNode(start);
+
+    this.dfsResult.set(this.dfs(start));
+    this.bfsResult.set([]);
+  }
+
+  performBFS(): void {
+    if (!this.nodes().length) {
+      this.algorithmMessage.set('Please add nodes first.');
+      return;
+    }
+
+    const start = this.startNodeId() ?? this.nodes()[0].id;
+
+    this.setStartNode(start);
+
+    this.bfsResult.set(this.bfs(start));
+    this.dfsResult.set([]);
+  }
+
+  // ✅ Updated for ngModel sync
+  setStartNode(id: number): void {
+    this.startNodeId.set(id);
+    this.startNodeModel = id;
+
+    this.dfsResult.set([]);
+    this.bfsResult.set([]);
+    this.algorithmMessage.set(`Start node set to ${id}`);
+  }
+
+  // ======================================================
+  // RESET + NAV
+  // ======================================================
 
   reset(): void {
     if (!confirm('Clear all nodes and edges?')) return;
@@ -263,6 +488,18 @@ export class Graph implements AfterViewInit {
     this.edges.set([]);
 
     this.selectedNodeId.set(null);
+    this.startNodeId.set(null);
+    this.startNodeModel = null;
+
+    this.draggingNodeId.set(null);
+
+    this.dfsResult.set([]);
+    this.bfsResult.set([]);
+    this.algorithmMessage.set('');
+
+    this.editingNodeId.set(null);
+    this.editingLabel.set('');
+
     this.nextNodeId = 0;
   }
 
