@@ -1,0 +1,156 @@
+<div class="flex flex-col justify-center items-center h-full">
+  <!-- Header -->
+  <div class="flex justify-center items-center h-6 mb-8 mt-6">
+    <h1 class="text-3xl font-bold text-primary-700">Graph Builder</h1>
+  </div>
+
+  <div class="flex">
+    <!-- Sidebar -->
+    <div
+      class="flex flex-col gap-6 m-6 w-64 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow"
+    >
+      <div>
+        <h2 class="text-lg font-semibold mb-4 text-primary-700">Statistics</h2>
+
+        <div class="space-y-3">
+          <div
+            class="bg-white/80 p-3 border border-primary-300 rounded shadow-sm"
+          >
+            <p class="text-sm text-primary-600"><strong>Nodes:</strong></p>
+            <p class="text-lg font-bold text-primary-700">
+              {{ nodes().length }}
+            </p>
+          </div>
+
+          <div
+            class="bg-white/80 p-3 border border-primary-300 rounded shadow-sm"
+          >
+            <p class="text-sm text-primary-600"><strong>Edges:</strong></p>
+            <p class="text-lg font-bold text-primary-700">
+              {{ edges().length }}
+            </p>
+          </div>
+
+          <div
+            class="bg-white/80 p-3 border border-primary-300 rounded shadow-sm"
+          >
+            <p class="text-sm text-primary-600"><strong>Node Size:</strong></p>
+
+            <div class="flex items-center gap-2 mt-2">
+              <input
+                type="range"
+                min="8"
+                max="30"
+                step="1"
+                class="slider flex-1"
+                [value]="nodeSize()"
+                (input)="nodeSize.set($any($event.target).valueAsNumber)"
+              />
+              <span
+                class="h-6 w-8 flex items-center justify-center text-xs bg-white border border-primary-300 rounded text-primary-700 font-semibold shadow-sm"
+              >
+                {{ nodeSize() }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modes -->
+      <div class="space-y-2">
+        <button
+          class="pale-button h-12 w-full"
+          [class.bg-blue-600]="linkMode()"
+          (click)="toggleLinkMode()"
+        >
+          {{ linkMode() ? 'Cancel Link' : 'Link Nodes' }}
+        </button>
+
+        <button
+          class="pale-button h-12 w-full"
+          [class.bg-red-600]="deleteMode()"
+          (click)="toggleDeleteMode()"
+        >
+          {{ deleteMode() ? 'Cancel Delete' : 'Delete Nodes' }}
+        </button>
+      </div>
+
+      <!-- Info -->
+      @if (linkMode() && selectedNodeId() !== null) {
+      <div
+        class="bg-blue-100 p-3 rounded border border-blue-300 text-sm text-blue-700"
+      >
+        <p>
+          Selected Node:
+          <strong>{{ selectedNodeId() }}</strong>
+        </p>
+        <p class="text-xs mt-1">Click another node to connect it</p>
+      </div>
+      }
+
+      <!-- Actions -->
+      <div class="space-y-2">
+        <button class="pale-button h-12" (click)="reset()">Reset</button>
+        <button class="pale-button h-12" (click)="back()">Back</button>
+      </div>
+    </div>
+
+    <!-- =========================== -->
+    <!-- ===== PLOT AREA =========== -->
+    <!-- =========================== -->
+
+    <div
+      #plotArea
+      class="relative w-[560px] h-[560px] border-2 bg-primary-50 rounded-lg shadow select-none overflow-hidden"
+      [class.border-primary-500]="!deleteMode() && !linkMode()"
+      [class.border-red-500]="deleteMode()"
+      [class.border-blue-500]="linkMode()"
+      [class.cursor-crosshair]="deleteMode() || linkMode()"
+      [class.cursor-default]="!deleteMode() && !linkMode()"
+      (click)="onPlotClick($event)"
+      (mousemove)="onPlotMouseMove($event)"
+      (mouseup)="onPlotMouseUp()"
+      (mouseleave)="onPlotMouseUp()"
+    >
+      <!-- Axes -->
+      <div
+        class="absolute left-1/2 top-0 bottom-0 w-[2px] bg-primary-300 -translate-x-1/2 pointer-events-none"
+      ></div>
+
+      <div
+        class="absolute top-1/2 left-0 right-0 h-[2px] bg-primary-300 -translate-y-1/2 pointer-events-none"
+      ></div>
+
+      <!-- Edges -->
+      <svg class="absolute inset-0 w-full h-full pointer-events-none">
+        @for (edge of edges(); track $index) {
+        <path
+          [attr.d]="getEdgePath(getNodeById(edge[0]), getNodeById(edge[1]))"
+          stroke="rgb(168,85,247)"
+          stroke-width="2"
+          fill="none"
+        />
+        }
+      </svg>
+
+      <!-- Nodes -->
+      @for (node of nodes(); track node.id) {
+
+      <div
+        class="absolute rounded-full border-2 shadow-md hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing"
+        [style.left.px]="getPosX(node.pos)"
+        [style.top.px]="getPosY(node.pos)"
+        [style.width.px]="nodeSize()"
+        [style.height.px]="nodeSize()"
+        [class.bg-primary-500]="!isNodeSelected(node.id)"
+        [class.bg-blue-500]="isNodeSelected(node.id)"
+        [class.border-primary-700]="!isNodeSelected(node.id)"
+        [class.border-blue-700]="isNodeSelected(node.id)"
+        (mousedown)="onNodeMouseDown($event, node.id)"
+        [title]="'Node ' + node.id"
+      ></div>
+
+      }
+    </div>
+  </div>
+</div>

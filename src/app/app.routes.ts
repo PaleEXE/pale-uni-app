@@ -5,6 +5,7 @@ import { Topic } from './topic/topic';
 import { Plot } from './plot/plot';
 import { FPGrowth } from './fp-growth/fp-growth';
 import { LinearRegression } from './linear-regression/linear-regression';
+import { Graph } from './graph/graph';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -29,5 +30,9 @@ export const routes: Routes = [
   {
     path: 'topic/:topicId/linear-regression',
     component: LinearRegression,
+  },
+  {
+    path: 'topic/:topicId/graph',
+    component: Graph,
   },
 ];

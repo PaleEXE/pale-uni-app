@@ -12,7 +12,7 @@ export const topics = [
     subtopics: ['Plot', 'FP-Growth'],
   },
   { title: 'I D K', subtopics: [] },
-  { title: 'Shaw', description: 'GIT GUD', subtopics: ['sui'] },
+  { title: 'Shaw', description: 'GIT GUD', subtopics: ['sui', 'graph'] },
   {
     title: 'Machine Learning',
     description: 'GIT GUD',
