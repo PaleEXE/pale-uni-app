@@ -88,7 +88,7 @@
         draggable="false"
         tabindex="-1"
       >
-        GoAlgo
+        {{ username || title }}
       </h1>
     </div>
     <svg
@@ -122,44 +122,56 @@
       />
     </svg>
   </div>
-  <div>
-    <label for="themeSelect" class="mr-2 font-medium">Theme:</label>
-    <select
-      id="themeSelect"
-      [(ngModel)]="selectedTheme"
-      (ngModelChange)="onThemeChange($event)"
-      class="p-2 border rounded bg-primary-400 border-primary-500 text-white cursor-pointer hover:bg-primary-500"
+  <div class="flex items-center gap-4">
+    @if (isLoggedIn) {
+    <button
+      (click)="logout()"
+      class="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition"
     >
-      <optgroup label="Warm Colors">
-        <option value="red">Red</option>
-        <option value="orange">Orange</option>
-        <option value="amber">Amber</option>
-        <option value="yellow">Yellow</option>
-        <option value="rose">Rose</option>
-        <option value="pink">Pink</option>
-        <option value="fuchsia">Fuchsia</option>
-      </optgroup>
+      Logout
+    </button>
 
-      <optgroup label="Cool Colors">
-        <option value="purple">Purple</option>
-        <option value="violet">Violet</option>
-        <option value="indigo">Indigo</option>
-        <option value="blue">Blue</option>
-        <option value="sky">Sky</option>
-        <option value="cyan">Cyan</option>
-        <option value="teal">Teal</option>
-        <option value="emerald">Emerald</option>
-        <option value="green">Green</option>
-        <option value="lime">Lime</option>
-      </optgroup>
+    }
 
-      <optgroup label="Neutral Colors">
-        <option value="slate">Slate</option>
-        <option value="gray">Gray</option>
-        <option value="zinc">Zinc</option>
-        <option value="neutral">Neutral</option>
-        <option value="stone">Stone</option>
-      </optgroup>
-    </select>
+    <div>
+      <label for="themeSelect" class="mr-2 font-medium">Theme:</label>
+      <select
+        id="themeSelect"
+        [(ngModel)]="selectedTheme"
+        (ngModelChange)="onThemeChange($event)"
+        class="p-2 border rounded bg-primary-400 border-primary-500 text-white cursor-pointer hover:bg-primary-500"
+      >
+        <optgroup label="Warm Colors">
+          <option value="red">Red</option>
+          <option value="orange">Orange</option>
+          <option value="amber">Amber</option>
+          <option value="yellow">Yellow</option>
+          <option value="rose">Rose</option>
+          <option value="pink">Pink</option>
+          <option value="fuchsia">Fuchsia</option>
+        </optgroup>
+
+        <optgroup label="Cool Colors">
+          <option value="purple">Purple</option>
+          <option value="violet">Violet</option>
+          <option value="indigo">Indigo</option>
+          <option value="blue">Blue</option>
+          <option value="sky">Sky</option>
+          <option value="cyan">Cyan</option>
+          <option value="teal">Teal</option>
+          <option value="emerald">Emerald</option>
+          <option value="green">Green</option>
+          <option value="lime">Lime</option>
+        </optgroup>
+
+        <optgroup label="Neutral Colors">
+          <option value="slate">Slate</option>
+          <option value="gray">Gray</option>
+          <option value="zinc">Zinc</option>
+          <option value="neutral">Neutral</option>
+          <option value="stone">Stone</option>
+        </optgroup>
+      </select>
+    </div>
   </div>
 </header>

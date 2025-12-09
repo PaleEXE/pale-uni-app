@@ -1,0 +1,77 @@
+<form (ngSubmit)="onRegister()" class="register-form">
+  <h2>Create Account</h2>
+
+  <div class="form-group">
+    <label for="username">Username</label>
+    <input
+      id="username"
+      type="text"
+      [(ngModel)]="registerData.username"
+      name="username"
+      placeholder="Choose a username"
+      required
+      class="form-control"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input
+      id="email"
+      type="email"
+      [(ngModel)]="registerData.email"
+      name="email"
+      placeholder="Enter your email"
+      required
+      class="form-control"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input
+      id="password"
+      type="password"
+      [(ngModel)]="registerData.password"
+      name="password"
+      placeholder="Create a password"
+      required
+      class="form-control"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="phone">Phone Number (Optional)</label>
+    <input
+      id="phone"
+      type="tel"
+      [(ngModel)]="registerData.phone_number"
+      name="phone_number"
+      placeholder="Your phone number"
+      class="form-control"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="theme">Preferred Theme</label>
+    <select [(ngModel)]="registerData.preferred_theme" name="theme" class="form-control">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+
+  <button type="submit" [disabled]="isLoading" class="btn btn-primary">
+    {{ isLoading ? 'Creating Account...' : 'Register' }}
+  </button>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div class="login-link">
+    <p>
+      Already have an account?
+      <a routerLink="/login">Login here</a>
+    </p>
+  </div>
+</form>

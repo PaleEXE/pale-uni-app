@@ -1,21 +1,33 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
+import { RouterLink, Router } from '@angular/router';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-header',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, CommonModule],
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
 export class AppHeader {
   protected title = 'GoAlgo';
   selectedTheme: string = 'amber';
+  isLoggedIn = false;
+  username: string = '';
 
-  constructor(@Inject(PLATFORM_ID) public platformId: Object) {}
+  constructor(
+    @Inject(PLATFORM_ID) public platformId: Object,
+    private authService: AuthService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
+    this.isLoggedIn = this.authService.isLoggedIn();
+    const currentUser = this.authService.currentUserValue;
+    if (currentUser) {
+      this.username = currentUser.username;
+    }
     if (isPlatformBrowser(this.platformId)) {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme) {
@@ -25,6 +37,14 @@ export class AppHeader {
         this.setPrimaryFromTheme(this.selectedTheme);
       }
     }
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.isLoggedIn = false;
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 500);
   }
 
   onThemeChange(theme: string) {

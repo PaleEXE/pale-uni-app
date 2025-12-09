@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AppHeader } from "./ui/header/header";
-
+import { AppHeader } from './ui/header/header';
 
 @Component({
   selector: 'app-root',
@@ -9,6 +8,4 @@ import { AppHeader } from "./ui/header/header";
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
-  
-}
+export class App {}
