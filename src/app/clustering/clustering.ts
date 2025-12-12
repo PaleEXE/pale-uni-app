@@ -74,10 +74,10 @@ const STORAGE_KEYS = {
   selector: 'app-plot',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './plot.html',
-  styleUrl: './plot.css',
+  templateUrl: './clustering.html',
+  styleUrl: './clustering.css',
 })
-export class Plot implements AfterViewInit, OnDestroy {
+export class Clustering implements AfterViewInit, OnDestroy {
   @ViewChild('plotArea') plotAreaRef!: ElementRef<HTMLDivElement>;
 
   // Dependency injection

@@ -1,0 +1,309 @@
+<div class="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold text-primary-800 mb-2">
+      Regular Expression Tester
+    </h1>
+    <p class="text-primary-600 mb-8">
+      Test and explore regex patterns with real-time matching and highlighting
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Pattern Input -->
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-bold text-primary-700 mb-4">Pattern</h2>
+
+        <div class="mb-4">
+          <label
+            for="pattern"
+            class="block text-sm font-semibold text-primary-600 mb-2"
+          >
+            Regex Pattern:
+          </label>
+          <input
+            id="pattern"
+            type="text"
+            [(ngModel)]="pattern"
+            (input)="onPatternChange()"
+            placeholder="e.g., \b\w+@\w+\.\w+\b"
+            class="w-full px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-600 font-mono"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label
+            for="flags"
+            class="block text-sm font-semibold text-primary-600 mb-2"
+          >
+            Flags:
+          </label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                [(ngModel)]="flags.global"
+                (change)="onPatternChange()"
+                class="w-4 h-4 text-primary-600 accent-primary-600"
+              />
+              <span class="text-sm font-mono text-primary-700">g (global)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                [(ngModel)]="flags.ignoreCase"
+                (change)="onPatternChange()"
+                class="w-4 h-4 text-primary-600"
+              />
+              <span class="text-sm font-mono text-primary-700"
+                >i (ignore case)</span
+              >
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                [(ngModel)]="flags.multiline"
+                (change)="onPatternChange()"
+                class="w-4 h-4 text-primary-600"
+              />
+              <span class="text-sm font-mono text-primary-700"
+                >m (multiline)</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <div class="bg-primary-50 border-l-4 border-primary-500 p-4 rounded">
+          <h3 class="font-semibold text-primary-700 mb-2">
+            Matches Found: {{ matchCount }}
+          </h3>
+          <div *ngIf="errorMessage" class="text-red-600 text-sm font-semibold">
+            ⚠️ {{ errorMessage }}
+          </div>
+          <div
+            *ngIf="!errorMessage && matchCount > 0"
+            class="text-primary-600 text-sm font-semibold"
+          >
+            ✓ Pattern is valid
+          </div>
+          <div
+            *ngIf="!errorMessage && matchCount === 0"
+            class="text-primary-600 text-sm"
+          >
+            No matches found
+          </div>
+        </div>
+      </div>
+
+      <!-- Text Input -->
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-bold text-primary-700 mb-4">Text to Match</h2>
+
+        <textarea
+          [(ngModel)]="inputText"
+          (input)="onPatternChange()"
+          placeholder="Enter text here to test the regex pattern..."
+          class="w-full h-64 px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:border-primary-600 font-mono text-sm resize-none"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Highlighted Result -->
+    <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+      <h2 class="text-2xl font-bold text-primary-700 mb-4">
+        Highlighted Matches
+      </h2>
+      <div
+        class="bg-primary-50 border-2 border-primary-300 rounded-lg p-6 font-mono text-sm whitespace-pre-wrap break-words overflow-auto max-h-96"
+      >
+        <ng-container *ngFor="let part of highlightedText; let i = index">
+          <span *ngIf="!part.isMatch" class="text-primary-800"
+            >{{ part.text }}</span
+          >
+          <span
+            *ngIf="part.isMatch"
+            class="bg-primary-300 text-primary-900 font-bold rounded px-1"
+            >{{ part.text }}</span
+          >
+        </ng-container>
+        <span *ngIf="highlightedText.length === 0" class="text-primary-400">
+          No matches to display
+        </span>
+      </div>
+    </div>
+
+    <!-- Matches List -->
+    <div
+      class="mt-8 bg-white rounded-lg shadow-lg p-6"
+      *ngIf="matches.length > 0"
+    >
+      <h2 class="text-2xl font-bold text-primary-700 mb-4">
+        Match Details ({{ matchCount }})
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b-2 border-primary-300">
+              <th class="text-left px-4 py-2 text-primary-700 font-bold">#</th>
+              <th class="text-left px-4 py-2 text-primary-700 font-bold">
+                Match
+              </th>
+              <th class="text-left px-4 py-2 text-primary-700 font-bold">
+                Position
+              </th>
+              <th class="text-left px-4 py-2 text-primary-700 font-bold">
+                Length
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let match of matches; let i = index"
+              class="border-b border-primary-200 hover:bg-primary-50"
+            >
+              <td class="px-4 py-2 text-primary-600">{{ i + 1 }}</td>
+              <td class="px-4 py-2 font-mono bg-yellow-100 rounded">
+                {{ match.text }}
+              </td>
+              <td class="px-4 py-2 text-primary-600">{{ match.index }}</td>
+              <td class="px-4 py-2 text-primary-600">{{ match.length }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cheat Sheet -->
+    <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+      <h2 class="text-2xl font-bold text-primary-700 mb-4">
+        Regex Cheat Sheet
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-semibold text-primary-600 mb-3">Characters</h3>
+          <ul class="space-y-2 text-sm">
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >.</code
+              >
+              - Any character except newline
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >\d</code
+              >
+              - Digit [0-9]
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >\w</code
+              >
+              - Word character [a-zA-Z0-9_]
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >\s</code
+              >
+              - Whitespace
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >[abc]</code
+              >
+              - Any of a, b, or c
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-primary-600 mb-3">Quantifiers</h3>
+          <ul class="space-y-2 text-sm">
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >*</code
+              >
+              - 0 or more
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >+</code
+              >
+              - 1 or more
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >?</code
+              >
+              - 0 or 1
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >{{ '{n,m}' }}</code
+              >
+              - Between n and m
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-primary-600 mb-3">Anchors</h3>
+          <ul class="space-y-2 text-sm">
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >^</code
+              >
+              - Start of string
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >$</code
+              >
+              - End of string
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >\b</code
+              >
+              - Word boundary
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold text-primary-600 mb-3">Examples</h3>
+          <ul class="space-y-2 text-sm">
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >\b\w+{{'@'}}\w+\.\w+\b</code
+              >
+              - Email
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >^\d{{ '{3}' }}-\d{{ '{2}' }}-\d{{ '{4}' }}$</code
+              >
+              - SSN
+            </li>
+            <li>
+              <code
+                class="bg-primary-100 px-2 py-1 rounded font-mono text-primary-700"
+                >\b\d{{ '{1,3}' }}\.\d{{ '{1,3}' }}\.\d{{ '{1,3}' }}\.\d{{
+                '{1,3}' }}\b</code
+              >
+              - IP
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

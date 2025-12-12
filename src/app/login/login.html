@@ -25,8 +25,8 @@
     />
   </div>
 
-  <button type="submit" [disabled]="isLoading" class="btn btn-primary">
-    {{ isLoading ? 'Logging in...' : 'Login' }}
+  <button type="submit" [disabled]="isLoading()" class="btn btn-primary">
+    {{ isLoading() ? 'Logging in...' : 'Login' }}
   </button>
 
   <div *ngIf="errorMessage" class="error-message">

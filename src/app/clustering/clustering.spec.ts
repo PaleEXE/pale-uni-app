@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Plot } from './plot';
+import { Clustering } from './clustering';
 
 describe('Plot', () => {
-  let component: Plot;
-  let fixture: ComponentFixture<Plot>;
+  let component: Clustering;
+  let fixture: ComponentFixture<Clustering>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Plot],
+      imports: [Clustering],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(Plot);
+    fixture = TestBed.createComponent(Clustering);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

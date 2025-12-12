@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, LoginRequest } from '../services/auth.service';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +17,7 @@ export class LoginComponent implements OnInit {
     password: '',
   };
 
-  isLoading = false;
+  isLoading = signal(false);
   errorMessage = '';
 
   constructor(
@@ -38,19 +38,19 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.errorMessage = '';
 
     this.authService.login(this.loginData).subscribe({
       next: (response) => {
-        this.isLoading = false;
+        this.isLoading.set(false);
         console.log('Login successful', response);
         setTimeout(() => {
           window.location.href = '/home';
         }, 500);
       },
       error: (error) => {
-        this.isLoading = false;
+        this.isLoading.set(false);
         console.error('Login failed', error);
         this.errorMessage =
           error.error?.detail || 'Login failed. Please try again.';
