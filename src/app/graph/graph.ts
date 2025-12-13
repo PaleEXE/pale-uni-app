@@ -9,6 +9,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Location } from '@angular/common';
+import { GraphService } from '../services/graph.service';
+import { HttpClientModule } from '@angular/common/http';
 
 type Point = [number, number];
 
@@ -22,13 +24,17 @@ interface GraphNode {
 @Component({
   selector: 'app-graph',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
+  providers: [GraphService],
   templateUrl: './graph.html',
   styleUrl: './graph.css',
 })
 export class Graph implements AfterViewInit {
   @ViewChild('plotArea')
   plotAreaRef!: ElementRef<HTMLDivElement>;
+
+  @ViewChild('fileInput')
+  fileInputRef!: ElementRef<HTMLInputElement>;
 
   //--------------------------
   // Layout
@@ -57,6 +63,14 @@ export class Graph implements AfterViewInit {
   readonly nodeSize = signal(32);
 
   //--------------------------
+  // Upload State
+  //--------------------------
+
+  readonly uploading = signal(false);
+  readonly uploadError = signal<string | null>(null);
+  readonly uploadSuccess = signal<string | null>(null);
+
+  //--------------------------
   // Drag
   //--------------------------
 
@@ -68,7 +82,6 @@ export class Graph implements AfterViewInit {
 
   readonly startNodeId = signal<number | null>(null);
 
-  // ✅ ngModel <-> signal sync variable
   startNodeModel: number | null = null;
 
   readonly dfsResult = signal<number[]>([]);
@@ -82,13 +95,14 @@ export class Graph implements AfterViewInit {
   readonly editingNodeId = signal<number | null>(null);
   readonly editingLabel = signal('');
 
-  constructor(private location: Location) {
-    // ✅ Auto-sync model with startNodeId signal
+  constructor(
+    private location: Location,
+    private graphService: GraphService
+  ) {
     effect(() => {
       this.startNodeModel = this.startNodeId();
     });
 
-    // ✅ Auto-select first node when graph changes
     effect(() => {
       const list = this.nodes();
 
@@ -191,7 +205,6 @@ export class Graph implements AfterViewInit {
     console.log('Start node changed:', id);
     if (id == null) return;
 
-    // Convert to number if it's a string (ngModel can return strings)
     const numId = typeof id === 'string' ? parseInt(id, 10) : id;
 
     if (isNaN(numId)) return;
@@ -467,7 +480,6 @@ export class Graph implements AfterViewInit {
     this.dfsResult.set([]);
   }
 
-  // ✅ Updated for ngModel sync
   setStartNode(id: number): void {
     this.startNodeId.set(id);
     this.startNodeModel = id;
@@ -475,6 +487,135 @@ export class Graph implements AfterViewInit {
     this.dfsResult.set([]);
     this.bfsResult.set([]);
     this.algorithmMessage.set(`Start node set to ${id}`);
+  }
+
+  // ======================================================
+  // FILE UPLOAD
+  // ======================================================
+
+  triggerFileUpload(): void {
+    this.fileInputRef.nativeElement.click();
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    if (!file.type.startsWith('image/')) {
+      this.uploadError.set('Please select an image file (PNG, JPG, JPEG)');
+      this.uploadSuccess.set(null);
+      return;
+    }
+
+    this.uploadGraph(file);
+    input.value = '';
+  }
+
+  uploadGraph(file: File): void {
+    this.uploading.set(true);
+    this.uploadError.set(null);
+    this.uploadSuccess.set(null);
+
+    this.graphService.extractGraph(file).subscribe({
+      next: (response) => {
+        this.uploading.set(false);
+
+        this.loadGraphFromResponse(response);
+
+        this.uploadSuccess.set(
+          `Successfully extracted ${response.node_count} nodes and ${response.edge_count} edges!`
+        );
+
+        setTimeout(() => this.uploadSuccess.set(null), 5000);
+      },
+      error: (error) => {
+        this.uploading.set(false);
+        this.uploadError.set(
+          error.error?.detail || 'Failed to extract graph from image'
+        );
+
+        setTimeout(() => this.uploadError.set(null), 5000);
+      },
+    });
+  }
+
+  private loadGraphFromResponse(response: {
+    nodes: GraphNode[];
+    node_count: number;
+    edge_count: number;
+  }): void {
+    setTimeout(() => {
+      const centeredNodes = this.centerGraph(response.nodes);
+      this.nodes.set(centeredNodes);
+
+      const edgeSet = new Set<string>();
+      const edges: [number, number][] = [];
+
+      for (const node of centeredNodes) {
+        for (const neighbor of node.neighbors) {
+          const key =
+            node.id < neighbor
+              ? `${node.id}-${neighbor}`
+              : `${neighbor}-${node.id}`;
+
+          if (!edgeSet.has(key)) {
+            edgeSet.add(key);
+            edges.push([node.id, neighbor]);
+          }
+        }
+      }
+
+      this.edges.set(edges);
+
+      this.nextNodeId = Math.max(...centeredNodes.map((n) => n.id), -1) + 1;
+
+      this.dfsResult.set([]);
+      this.bfsResult.set([]);
+      this.algorithmMessage.set('');
+    }, 0);
+  }
+
+  private centerGraph(nodes: GraphNode[]): GraphNode[] {
+    if (nodes.length === 0) return nodes;
+
+    const xCoords = nodes.map((n) => n.pos[0]);
+    const yCoords = nodes.map((n) => n.pos[1]);
+
+    const minX = Math.min(...xCoords);
+    const maxX = Math.max(...xCoords);
+    const minY = Math.min(...yCoords);
+    const maxY = Math.max(...yCoords);
+
+    const graphWidth = maxX - minX;
+    const graphHeight = maxY - minY;
+
+    const w = this.width();
+    const h = this.height();
+
+    if (w === 0 || h === 0) {
+      return nodes;
+    }
+
+    const padding = 100;
+    const availableWidth = w - padding * 2;
+    const availableHeight = h - padding * 2;
+
+    const scaleX = graphWidth > 0 ? availableWidth / graphWidth : 1;
+    const scaleY = graphHeight > 0 ? availableHeight / graphHeight : 1;
+    const scale = Math.min(scaleX, scaleY);
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    return nodes.map((node) => ({
+      ...node,
+      pos: [
+        (node.pos[0] - centerX) * scale,
+        -(node.pos[1] - centerY) * scale,
+      ] as Point,
+    }));
   }
 
   // ======================================================
@@ -501,6 +642,9 @@ export class Graph implements AfterViewInit {
     this.editingLabel.set('');
 
     this.nextNodeId = 0;
+
+    this.uploadError.set(null);
+    this.uploadSuccess.set(null);
   }
 
   back(): void {
