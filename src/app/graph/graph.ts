@@ -5,11 +5,13 @@ import {
   AfterViewInit,
   signal,
   effect,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Location } from '@angular/common';
-import { GraphService } from '../services/graph.service';
+import { GraphService, SavedVisualResponse } from '../services/graph.service';
+import { AuthService } from '../services/auth.service';
 import { HttpClientModule } from '@angular/common/http';
 
 type Point = [number, number];
@@ -95,9 +97,33 @@ export class Graph implements AfterViewInit {
   readonly editingNodeId = signal<number | null>(null);
   readonly editingLabel = signal('');
 
+  //--------------------------
+  // Saved Visuals
+  //--------------------------
+
+  readonly savingVisual = signal(false);
+  readonly saveError = signal<string | null>(null);
+  readonly saveSuccess = signal<string | null>(null);
+  readonly loadingVisuals = signal(false);
+  readonly savedVisuals = signal<SavedVisualResponse[]>([]);
+  readonly showSavedVisuals = signal(false);
+  readonly visualName = signal('');
+
+  //--------------------------
+  // Label Corrections
+  //--------------------------
+
+  readonly uploadedImagePath = signal<string | null>(null);
+  readonly predictedLabels = signal<Record<number, string>>({});
+  readonly correctedLabels = signal<Record<number, string>>({});
+  readonly showLabelCorrections = signal(false);
+  readonly savingCorrections = signal(false);
+  readonly correctionsMessage = signal<string | null>(null);
+
   constructor(
     private location: Location,
-    private graphService: GraphService
+    private graphService: GraphService,
+    private authService: AuthService
   ) {
     effect(() => {
       this.startNodeModel = this.startNodeId();
@@ -518,11 +544,39 @@ export class Graph implements AfterViewInit {
     this.uploadError.set(null);
     this.uploadSuccess.set(null);
 
-    this.graphService.extractGraph(file).subscribe({
+    const user = this.authService.currentUserValue;
+    if (!user) {
+      this.uploadError.set('User not authenticated');
+      this.uploading.set(false);
+      return;
+    }
+
+    this.graphService.extractGraph(file, user.user_id).subscribe({
       next: (response) => {
         this.uploading.set(false);
 
+        // Store predicted labels from response
+        const predicted: Record<number, string> = {};
+        response.nodes.forEach((node) => {
+          predicted[node.id] = node.label;
+        });
+        this.predictedLabels.set(predicted);
+        this.correctedLabels.set({ ...predicted }); // Initialize corrected with predicted
+
+        // Extract image path from filename (user_id is in URL path)
+        const user = this.authService.currentUserValue;
+        if (user) {
+          // Store relative path format
+          const timestamp = new Date().getTime();
+          this.uploadedImagePath.set(
+            `graph_images/${user.user_id}/graph_${timestamp}`
+          );
+        }
+
         this.loadGraphFromResponse(response);
+
+        // Show label corrections modal
+        this.showLabelCorrections.set(true);
 
         this.uploadSuccess.set(
           `Successfully extracted ${response.node_count} nodes and ${response.edge_count} edges!`
@@ -649,5 +703,181 @@ export class Graph implements AfterViewInit {
 
   back(): void {
     this.location.back();
+  }
+
+  // ======================================================
+  // SAVED VISUALS
+  // ======================================================
+
+  getGraphData(): Record<string, any> {
+    return {
+      nodes: this.nodes(),
+      edges: this.edges(),
+    };
+  }
+
+  saveCurrentGraph(): void {
+    if (!this.visualName() || this.visualName().trim() === '') {
+      this.saveError.set('Please enter a name for the visualization');
+      return;
+    }
+
+    const user = this.authService.currentUserValue;
+    if (!user) {
+      this.saveError.set('User not authenticated');
+      return;
+    }
+
+    this.savingVisual.set(true);
+    this.saveError.set(null);
+    this.saveSuccess.set(null);
+
+    this.graphService
+      .saveVisual(user.user_id, this.getGraphData(), this.visualName())
+      .subscribe({
+        next: () => {
+          this.saveSuccess.set(`Graph saved as "${this.visualName()}"`);
+          this.visualName.set('');
+          this.savingVisual.set(false);
+          setTimeout(() => this.saveSuccess.set(null), 3000);
+          this.loadSavedVisuals();
+        },
+        error: (err) => {
+          console.error('Error saving graph:', err);
+          this.saveError.set(
+            err.error?.detail || 'Failed to save graph. Please try again.'
+          );
+          this.savingVisual.set(false);
+        },
+      });
+  }
+
+  loadSavedVisuals(): void {
+    const user = this.authService.currentUserValue;
+    if (!user) {
+      this.saveError.set('User not authenticated');
+      return;
+    }
+
+    this.loadingVisuals.set(true);
+
+    this.graphService.getSavedVisuals(user.user_id).subscribe({
+      next: (visuals) => {
+        this.savedVisuals.set(visuals);
+        this.loadingVisuals.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading saved visuals:', err);
+        this.saveError.set('Failed to load saved graphs');
+        this.loadingVisuals.set(false);
+      },
+    });
+  }
+
+  loadGraphFromSaved(visual: SavedVisualResponse): void {
+    const graphData = visual.saved_visual as any;
+
+    if (
+      graphData.nodes &&
+      Array.isArray(graphData.nodes) &&
+      graphData.edges &&
+      Array.isArray(graphData.edges)
+    ) {
+      this.nodes.set(graphData.nodes);
+      this.edges.set(graphData.edges);
+
+      if (graphData.nodes.length > 0) {
+        this.nextNodeId =
+          Math.max(...graphData.nodes.map((n: GraphNode) => n.id)) + 1;
+      }
+
+      this.showSavedVisuals.set(false);
+      this.saveSuccess.set(`Loaded graph: "${visual.type}"`);
+      setTimeout(() => this.saveSuccess.set(null), 3000);
+    } else {
+      this.saveError.set('Invalid graph data format');
+    }
+  }
+
+  deleteGraphFromSaved(visualId: number, visualName: string): void {
+    this.graphService.deleteSavedVisual(visualId).subscribe({
+      next: () => {
+        this.saveSuccess.set(`Graph ${visualName} deleted successfully`);
+        setTimeout(() => this.saveSuccess.set(null), 3000);
+        this.loadSavedVisuals();
+      },
+      error: (err) => {
+        console.error('Error deleting graph:', err);
+        this.saveError.set('Failed to delete graph');
+      },
+    });
+  }
+
+  toggleSavedVisuals(): void {
+    if (!this.showSavedVisuals()) {
+      this.loadSavedVisuals();
+    }
+    this.showSavedVisuals.set(!this.showSavedVisuals());
+  }
+
+  // ======================================================
+  // LABEL CORRECTIONS
+  // ======================================================
+
+  updateCorrectedLabel(nodeId: number, newLabel: string): void {
+    const corrected = { ...this.correctedLabels() };
+    corrected[nodeId] = newLabel.toUpperCase();
+    this.correctedLabels.set(corrected);
+
+    // Update node label in display
+    this.nodes.set(
+      this.nodes().map((n) =>
+        n.id === nodeId ? { ...n, label: newLabel.toUpperCase() } : n
+      )
+    );
+  }
+
+  saveLabelCorrections(): void {
+    const imagePath = this.uploadedImagePath();
+    const user = this.authService.currentUserValue;
+
+    if (!imagePath || !user) {
+      this.correctionsMessage.set('Error: Missing image path or user info');
+      return;
+    }
+
+    const hasCorrections =
+      JSON.stringify(this.correctedLabels()) !==
+      JSON.stringify(this.predictedLabels());
+
+    if (!hasCorrections) {
+      this.correctionsMessage.set('No corrections made');
+      return;
+    }
+
+    this.savingCorrections.set(true);
+
+    this.graphService
+      .saveLabelCorrections(
+        user.user_id,
+        imagePath,
+        this.correctedLabels(),
+        this.predictedLabels()
+      )
+      .subscribe({
+        next: () => {
+          this.correctionsMessage.set('Label corrections saved successfully!');
+          this.savingCorrections.set(false);
+          setTimeout(() => {
+            this.correctionsMessage.set(null);
+            this.showLabelCorrections.set(false);
+          }, 2000);
+        },
+        error: (err) => {
+          console.error('Error saving corrections:', err);
+          this.correctionsMessage.set('Failed to save corrections');
+          this.savingCorrections.set(false);
+        },
+      });
   }
 }
