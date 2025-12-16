@@ -208,15 +208,6 @@
           (mouseup)="onPlotMouseUp()"
           (mouseleave)="onPlotMouseUp()"
         >
-          <!-- Axes -->
-          <div
-            class="absolute left-1/2 top-0 bottom-0 w-[2px] bg-primary-300 -translate-x-1/2 pointer-events-none"
-          ></div>
-
-          <div
-            class="absolute top-1/2 left-0 right-0 h-[2px] bg-primary-300 -translate-y-1/2 pointer-events-none"
-          ></div>
-
           <!-- Edges -->
           <svg class="absolute inset-0 w-full h-full pointer-events-none">
             @for (edge of edges(); track $index) {
