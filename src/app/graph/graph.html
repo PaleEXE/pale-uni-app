@@ -148,7 +148,7 @@
               placeholder="Graph name..."
               [(ngModel)]="visualName"
               (keyup.enter)="saveCurrentGraph()"
-              class="w-full px-3 py-2 border border-primary-300 rounded text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              class="w-full px-3 py-2 rounded text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white/80 border border-primary-300 text-primary-700 font-medium"
             />
 
             <button
@@ -191,168 +191,281 @@
           <!-- ============ PLOT AREA AND RIGHT PANEL ROW ============ -->
           <div class="flex flex-row gap-6 items-start">
             <!-- ============ PLOT AREA ============ -->
-
-            <div
-              #plotArea
-              class="relative w-[560px] h-[560px] border-2 bg-primary-50 rounded-lg shadow select-none overflow-hidden"
-              [class.border-primary-500]="!deleteMode() && !linkMode()"
-              [class.border-red-500]="deleteMode()"
-              [class.border-blue-500]="linkMode()"
-              [class.cursor-crosshair]="deleteMode() || linkMode()"
-              [class.cursor-default]="!deleteMode() && !linkMode()"
-              (click)="onPlotClick($event)"
-              (mousemove)="onPlotMouseMove($event)"
-              (mouseup)="onPlotMouseUp()"
-              (mouseleave)="onPlotMouseUp()"
-            >
-              <!-- Edges -->
-              <svg class="absolute inset-0 w-full h-full pointer-events-none">
-                @for (edge of edges(); track $index) {
-                <path
-                  [attr.d]="getEdgePath(getNodeById(edge[0]), getNodeById(edge[1]))"
-                  stroke="#a855f7"
-                  stroke-width="2"
-                  fill="none"
-                />
-                }
-              </svg>
-
-              <!-- Nodes -->
-              @for (node of nodes(); track node.id) {
-
+            <div class="flex flex-col gap-6">
               <div
-                class="absolute rounded-full border-2 shadow-md hover:shadow-lg transition-shadow cursor-grab active:cursor-grabbing z-10 flex items-center justify-center"
-                [style.left.px]="getPosX(node.pos)"
-                [style.top.px]="getPosY(node.pos)"
-                [style.width.px]="nodeSize()"
-                [style.height.px]="nodeSize()"
-                [class.bg-primary-500]="!isNodeSelected(node.id)"
-                [class.bg-blue-500]="isNodeSelected(node.id)"
-                [class.border-primary-700]="!isNodeSelected(node.id)"
-                [class.border-blue-700]="isNodeSelected(node.id)"
-                (mousedown)="onNodeMouseDown($event, node.id)"
-                (dblclick)="startEditingLabel(node.id)"
-                [title]="'Node ' + node.id + ' (' + node.label + ')'"
+                #plotArea
+                class="relative w-[560px] h-[560px] border-2 bg-primary-50 rounded-lg shadow select-none overflow-hidden"
+                [class.border-primary-500]="!deleteMode() && !linkMode()"
+                [class.border-red-500]="deleteMode()"
+                [class.border-blue-500]="linkMode()"
+                [class.cursor-crosshair]="deleteMode() || linkMode()"
+                [class.cursor-default]="!deleteMode() && !linkMode()"
+                (click)="onPlotClick($event)"
+                (mousemove)="onPlotMouseMove($event)"
+                (mouseup)="onPlotMouseUp()"
+                (mouseleave)="onPlotMouseUp()"
               >
-                @if (editingNodeId() !== node.id) {
-                <span class="text-white font-bold text-center">
-                  {{ node.label }}
-                </span>
-                }
-              </div>
-
-              }
-
-              <!-- Label Edit Modal -->
-              @if (editingNodeId() !== null) {
-              <div
-                class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
-                (click)="cancelEditingLabel()"
-              >
-                <div
-                  class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500"
-                  (click)="$event.stopPropagation()"
-                >
-                  <h3 class="text-lg font-bold text-primary-700 mb-4">
-                    Edit Node Label
-                  </h3>
-
-                  <input
-                    type="text"
-                    [value]="editingLabel()"
-                    (input)="editingLabel.set($any($event.target).value.toUpperCase())"
-                    (keyup.enter)="saveLabel()"
-                    (keyup.escape)="cancelEditingLabel()"
-                    class="w-32 px-3 py-2 border-2 border-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 text-center font-bold text-lg"
-                    placeholder="A"
-                    autofocus
+                <!-- Edges -->
+                <svg class="absolute inset-0 w-full h-full pointer-events-none">
+                  @for (edge of edges(); track $index) {
+                  <path
+                    [attr.d]="getEdgePath(getNodeById(edge[0]), getNodeById(edge[1]))"
+                    [attr.stroke-width]="getEdgeWidth(edge)"
+                    fill="none"
+                    class="stroke-current text-primary-500 transition-all duration-300"
                   />
+                  }
+                </svg>
 
-                  <div class="flex gap-2 mt-4">
+                <!-- Nodes -->
+                @for (node of nodes(); track node.id) {
+
+                <div
+                  class="absolute rounded-full border-2 shadow-md hover:shadow-lg cursor-grab active:cursor-grabbing z-10 flex items-center justify-center"
+                  [style.left.px]="getPosX(node.pos)"
+                  [style.top.px]="getPosY(node.pos)"
+                  [style.width.px]="nodeSize()"
+                  [style.height.px]="nodeSize()"
+                  [class.bg-primary-500]="!isNodeSelected(node.id) && getNodeStateInCurrentStep(node.id) === 'unvisited'"
+                  [class.bg-primary-600]="isNodeSelected(node.id)"
+                  [class.bg-primary-300]="getNodeStateInCurrentStep(node.id) === 'open'"
+                  [class.bg-primary-900]="getNodeStateInCurrentStep(node.id) === 'closed'"
+                  [class.bg-primary-700]="getNodeStateInCurrentStep(node.id) === 'visited'"
+                  [class.border-primary-700]="!isNodeSelected(node.id) && getNodeStateInCurrentStep(node.id) === 'unvisited'"
+                  [class.border-primary-600]="isNodeSelected(node.id)"
+                  [class.border-primary-400]="getNodeStateInCurrentStep(node.id) === 'open'"
+                  [class.border-primary-900]="getNodeStateInCurrentStep(node.id) === 'closed'"
+                  [class.border-primary-800]="getNodeStateInCurrentStep(node.id) === 'visited'"
+                  [style.transform]="getNodeTransform(node.id)"
+                  (mousedown)="onNodeMouseDown($event, node.id)"
+                  (dblclick)="startEditingLabel(node.id)"
+                  [title]="'Node ' + node.id + ' (' + node.label + ')'"
+                >
+                  @if (editingNodeId() !== node.id) {
+                  <span
+                    class="text-white font-bold text-center transition-all duration-300"
+                    [class.text-gray-900]="getNodeStateInCurrentStep(node.id) === 'open'"
+                  >
+                    {{ node.label }}
+                  </span>
+                  }
+                </div>
+
+                }
+
+                <!-- Label Edit Modal -->
+                @if (editingNodeId() !== null) {
+                <div
+                  class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
+                  (click)="cancelEditingLabel()"
+                >
+                  <div
+                    class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <h3 class="text-lg font-bold text-primary-700 mb-4">
+                      Edit Node Label
+                    </h3>
+
+                    <input
+                      type="text"
+                      [value]="editingLabel()"
+                      (input)="editingLabel.set($any($event.target).value.toUpperCase())"
+                      (keyup.enter)="saveLabel()"
+                      (keyup.escape)="cancelEditingLabel()"
+                      class="w-32 px-3 py-2 border-2 border-primary-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 text-center font-bold text-lg"
+                      placeholder="A"
+                      autofocus
+                    />
+
+                    <div class="flex gap-2 mt-4">
+                      <button
+                        class="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600"
+                        (click)="saveLabel()"
+                      >
+                        Save
+                      </button>
+                      <button
+                        class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                        (click)="cancelEditingLabel()"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                }
+
+                <!-- Saved Graphs Modal -->
+                @if (showSavedVisuals()) {
+                <div
+                  class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
+                  (click)="showSavedVisuals.set(false)"
+                >
+                  <div
+                    class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500 w-96 max-h-96 overflow-y-auto"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <h3 class="text-lg font-bold text-primary-700 mb-4">
+                      Saved Graphs
+                    </h3>
+
+                    @if (loadingVisuals()) {
+                    <div class="text-center text-primary-600">Loading...</div>
+                    } @else if (savedVisuals().length === 0) {
+                    <div class="text-center text-gray-600">
+                      No saved graphs yet
+                    </div>
+                    } @else {
+                    <div class="space-y-2">
+                      @for (visual of savedVisuals(); track visual.id) {
+                      <div
+                        class="flex items-center justify-between p-3 bg-primary-50 border border-primary-300 rounded hover:bg-primary-100"
+                      >
+                        <div class="flex-1">
+                          <p class="font-semibold text-primary-700">
+                            {{ visual.type }}
+                          </p>
+                          <p class="text-xs text-primary-600">
+                            Nodes: {{ visual.saved_visual['nodes'].length }},
+                            Edges: {{ visual.saved_visual['edges'].length }}
+                          </p>
+                        </div>
+
+                        <div class="flex gap-2">
+                          <button
+                            class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                            (click)="loadGraphFromSaved(visual)"
+                          >
+                            Load
+                          </button>
+
+                          <button
+                            class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+                            (click)="deleteGraphFromSaved(visual.id, visual.type)"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                      }
+                    </div>
+                    }
+
                     <button
-                      class="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600"
-                      (click)="saveLabel()"
+                      class="w-full mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                      (click)="showSavedVisuals.set(false)"
                     >
-                      Save
-                    </button>
-                    <button
-                      class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                      (click)="cancelEditingLabel()"
-                    >
-                      Cancel
+                      Close
                     </button>
                   </div>
                 </div>
+                }
               </div>
-              }
-
-              <!-- Saved Graphs Modal -->
-              @if (showSavedVisuals()) {
-              <div
-                class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
-                (click)="showSavedVisuals.set(false)"
-              >
+              <!-- ================= TRAVERSAL STEPS TABLE ================= -->
+              @if (traversalSteps().length > 0) {
+              <div class="w-[560px]">
                 <div
-                  class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500 w-96 max-h-96 overflow-y-auto"
-                  (click)="$event.stopPropagation()"
+                  class="p-4 bg-primary-50 border-2 border-primary-300 rounded-lg shadow"
                 >
-                  <h3 class="text-lg font-bold text-primary-700 mb-4">
-                    Saved Graphs
+                  <h3 class="font-bold text-primary-700 mb-3">
+                    {{ dfsResult().length > 0 ? 'DFS' : 'BFS' }} Traversal Steps
                   </h3>
 
-                  @if (loadingVisuals()) {
-                  <div class="text-center text-primary-600">Loading...</div>
-                  } @else if (savedVisuals().length === 0) {
-                  <div class="text-center text-gray-600">
-                    No saved graphs yet
-                  </div>
-                  } @else {
-                  <div class="space-y-2">
-                    @for (visual of savedVisuals(); track visual.id) {
-                    <div
-                      class="flex items-center justify-between p-3 bg-primary-50 border border-primary-300 rounded hover:bg-primary-100"
-                    >
-                      <div class="flex-1">
-                        <p class="font-semibold text-primary-700">
-                          {{ visual.type }}
-                        </p>
-                        <p class="text-xs text-primary-600">
-                          Nodes: {{ visual.saved_visual['nodes'].length }},
-                          Edges: {{ visual.saved_visual['edges'].length }}
-                        </p>
-                      </div>
-
-                      <div class="flex gap-2">
-                        <button
-                          class="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-                          (click)="loadGraphFromSaved(visual)"
+                  <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-sm">
+                      <thead>
+                        <tr
+                          class="bg-primary-200 border-b-2 border-primary-400"
                         >
-                          Load
-                        </button>
-
-                        <button
-                          class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-                          (click)="deleteGraphFromSaved(visual.id, visual.type)"
+                          <th
+                            class="px-3 py-2 text-left font-semibold text-primary-700"
+                          >
+                            Step
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold text-primary-700"
+                          >
+                            Node ID
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold text-primary-700"
+                          >
+                            Node Label
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold text-primary-700"
+                          >
+                            Visited Nodes
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold text-primary-700"
+                          >
+                            Open Nodes
+                          </th>
+                          <th
+                            class="px-3 py-2 text-left font-semibold text-primary-700"
+                          >
+                            Closed Nodes
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (step of traversalSteps(); track step.step) {
+                        <tr
+                          class="border-b border-primary-200 hover:bg-primary-100 transition-colors"
                         >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    }
+                          <td class="px-3 py-2 font-semibold text-primary-600">
+                            {{ step.step }}
+                          </td>
+                          <td class="px-3 py-2 text-primary-700">
+                            {{ step.nodeId }}
+                          </td>
+                          <td class="px-3 py-2 font-bold text-primary-600">
+                            {{ step.nodeLabel }}
+                          </td>
+                          <td class="px-3 py-2 text-primary-700">
+                            <span class="inline-flex gap-1 flex-wrap">
+                              @for (nodeId of step.visited; track nodeId) {
+                              <span
+                                class="inline-block px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-semibold"
+                              >
+                                {{ getNodeById(nodeId)?.label }}
+                              </span>
+                              }
+                            </span>
+                          </td>
+                          <td class="px-3 py-2 text-primary-700">
+                            <span class="inline-flex gap-1 flex-wrap">
+                              @for (nodeId of step.open; track nodeId) {
+                              <span
+                                class="inline-block px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-semibold"
+                              >
+                                {{ getNodeById(nodeId)?.label }}
+                              </span>
+                              }
+                            </span>
+                          </td>
+                          <td class="px-3 py-2 text-primary-700">
+                            <span class="inline-flex gap-1 flex-wrap">
+                              @for (nodeId of step.closed; track nodeId) {
+                              <span
+                                class="inline-block px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-semibold"
+                              >
+                                {{ getNodeById(nodeId)?.label }}
+                              </span>
+                              }
+                            </span>
+                          </td>
+                        </tr>
+                        }
+                      </tbody>
+                    </table>
                   </div>
-                  }
-
-                  <button
-                    class="w-full mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-                    (click)="showSavedVisuals.set(false)"
-                  >
-                    Close
-                  </button>
                 </div>
               </div>
               }
             </div>
-
             <!-- ================= RIGHT PANEL ================= -->
 
             <div class="w-64 space-y-4">
@@ -369,7 +482,7 @@
                 </label>
 
                 <select
-                  class="w-full px-2 py-2 border border-primary-300 rounded bg-white text-primary-700 text-sm mb-3"
+                  class="w-full px-3 py-2 mb-3 text-box bg-primary-400 text-white cursor-pointer hover:bg-primary-500 rounded"
                   [(ngModel)]="startNodeModel"
                   (change)="onStartNodeChange(startNodeModel)"
                 >
@@ -398,6 +511,41 @@
                   >
                     Run BFS
                   </button>
+
+                  <!-- Step Navigation -->
+                  @if (showStepMode() && traversalSteps().length > 0) {
+                  <div class="border-t-2 border-primary-300 pt-3 space-y-2">
+                    <div
+                      class="text-xs text-primary-700 font-semibold text-center"
+                    >
+                      Step {{ currentStepIndex() + 1 }} / {{
+                      traversalSteps().length }}
+                    </div>
+
+                    <button
+                      class="pale-button h-10 w-full text-sm bg-blue-500 text-white hover:bg-blue-600"
+                      (click)="previousStep()"
+                      [disabled]="currentStepIndex() === 0"
+                    >
+                      ← Previous
+                    </button>
+
+                    <button
+                      class="pale-button h-10 w-full text-sm bg-blue-500 text-white hover:bg-blue-600"
+                      (click)="nextStep()"
+                      [disabled]="currentStepIndex() === traversalSteps().length - 1"
+                    >
+                      Next →
+                    </button>
+
+                    <button
+                      class="pale-button h-10 w-full text-sm bg-gray-500 text-white hover:bg-gray-600"
+                      (click)="resetStepMode()"
+                    >
+                      Reset View
+                    </button>
+                  </div>
+                  }
                 </div>
               </div>
 
@@ -411,6 +559,49 @@
                   {{ dfsResult().length > 0 ? 'DFS Traversal' : 'BFS Traversal'
                   }} Result
                 </h3>
+
+                @if (showStepMode() && traversalSteps().length > 0) {
+                <div
+                  class="mb-3 p-3 bg-white rounded border border-primary-300"
+                >
+                  <p class="text-xs text-primary-600 mb-2">
+                    <strong>Current Step:</strong>
+                  </p>
+                  <div class="text-sm text-primary-700">
+                    <p class="mb-1">
+                      <strong>Processing Node:</strong> {{
+                      traversalSteps()[currentStepIndex()].nodeLabel }}
+                    </p>
+                    <p class="text-xs mt-2"><strong>Legend:</strong></p>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                      <span class="inline-flex items-center gap-1 text-xs">
+                        <span
+                          class="w-3 h-3 bg-primary-700 rounded-full border border-primary-800"
+                        ></span>
+                        <span>Visited</span>
+                      </span>
+                      <span class="inline-flex items-center gap-1 text-xs">
+                        <span
+                          class="w-3 h-3 bg-primary-300 rounded-full border border-primary-400"
+                        ></span>
+                        <span>Open</span>
+                      </span>
+                      <span class="inline-flex items-center gap-1 text-xs">
+                        <span
+                          class="w-3 h-3 bg-primary-900 rounded-full border border-primary-900"
+                        ></span>
+                        <span>Closed</span>
+                      </span>
+                      <span class="inline-flex items-center gap-1 text-xs">
+                        <span
+                          class="w-3 h-3 bg-primary-500 rounded-full border border-primary-700"
+                        ></span>
+                        <span>Unvisited</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                }
 
                 <div class="flex flex-wrap gap-2">
                   @for (nodeId of (dfsResult().length > 0 ? dfsResult() :
@@ -443,108 +634,6 @@
               }
             </div>
           </div>
-
-          <!-- ================= TRAVERSAL STEPS TABLE ================= -->
-          @if (traversalSteps().length > 0) {
-          <div class="w-full">
-            <div
-              class="p-4 bg-primary-50 border-2 border-primary-300 rounded-lg shadow"
-            >
-              <h3 class="font-bold text-primary-700 mb-3">
-                {{ dfsResult().length > 0 ? 'DFS' : 'BFS' }} Traversal Steps
-              </h3>
-
-              <div class="overflow-x-auto">
-                <table class="w-full border-collapse text-sm">
-                  <thead>
-                    <tr class="bg-primary-200 border-b-2 border-primary-400">
-                      <th
-                        class="px-3 py-2 text-left font-semibold text-primary-700"
-                      >
-                        Step
-                      </th>
-                      <th
-                        class="px-3 py-2 text-left font-semibold text-primary-700"
-                      >
-                        Node ID
-                      </th>
-                      <th
-                        class="px-3 py-2 text-left font-semibold text-primary-700"
-                      >
-                        Node Label
-                      </th>
-                      <th
-                        class="px-3 py-2 text-left font-semibold text-primary-700"
-                      >
-                        Visited Nodes
-                      </th>
-                      <th
-                        class="px-3 py-2 text-left font-semibold text-primary-700"
-                      >
-                        Open Nodes
-                      </th>
-                      <th
-                        class="px-3 py-2 text-left font-semibold text-primary-700"
-                      >
-                        Closed Nodes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (step of traversalSteps(); track step.step) {
-                    <tr
-                      class="border-b border-primary-200 hover:bg-primary-100 transition-colors"
-                    >
-                      <td class="px-3 py-2 font-semibold text-primary-600">
-                        {{ step.step }}
-                      </td>
-                      <td class="px-3 py-2 text-primary-700">
-                        {{ step.nodeId }}
-                      </td>
-                      <td class="px-3 py-2 font-bold text-primary-600">
-                        {{ step.nodeLabel }}
-                      </td>
-                      <td class="px-3 py-2 text-primary-700">
-                        <span class="inline-flex gap-1 flex-wrap">
-                          @for (nodeId of step.visited; track nodeId) {
-                          <span
-                            class="inline-block px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-semibold"
-                          >
-                            {{ getNodeById(nodeId)?.label }}
-                          </span>
-                          }
-                        </span>
-                      </td>
-                      <td class="px-3 py-2 text-primary-700">
-                        <span class="inline-flex gap-1 flex-wrap">
-                          @for (nodeId of step.open; track nodeId) {
-                          <span
-                            class="inline-block px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-semibold"
-                          >
-                            {{ getNodeById(nodeId)?.label }}
-                          </span>
-                          }
-                        </span>
-                      </td>
-                      <td class="px-3 py-2 text-primary-700">
-                        <span class="inline-flex gap-1 flex-wrap">
-                          @for (nodeId of step.closed; track nodeId) {
-                          <span
-                            class="inline-block px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-semibold"
-                          >
-                            {{ getNodeById(nodeId)?.label }}
-                          </span>
-                          }
-                        </span>
-                      </td>
-                    </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          }
         </div>
       </div>
     </div>

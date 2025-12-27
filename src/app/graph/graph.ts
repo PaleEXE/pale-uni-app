@@ -102,6 +102,11 @@ export class Graph implements AfterViewInit {
     }>
   >([]);
 
+  // Step-by-step visualization
+  readonly currentStepIndex = signal<number>(0);
+  readonly showStepMode = signal(false);
+  readonly algorithmType = signal<'dfs' | 'bfs' | null>(null);
+
   //--------------------------
   // Label Management
   //--------------------------
@@ -425,6 +430,70 @@ export class Graph implements AfterViewInit {
   }
 
   // ======================================================
+  // ANIMATION & STYLING
+  // ======================================================
+
+  getNodeTransform(nodeId: number): string {
+    const state = this.getNodeStateInCurrentStep(nodeId);
+    if (!this.showStepMode()) return 'scale(1)';
+
+    switch (state) {
+      case 'visited':
+        return 'scale(1.15)';
+      case 'open':
+        return 'scale(1.1)';
+      case 'closed':
+        return 'scale(0.95)';
+      default:
+        return 'scale(1)';
+    }
+  }
+
+  getEdgeColor(edge: [number, number]): string {
+    if (!this.showStepMode()) return '#6b7280'; // gray-500
+
+    const [from, to] = edge;
+    const currentStep = this.traversalSteps()[this.currentStepIndex()];
+    if (!currentStep) return '#6b7280';
+
+    const fromState = this.getNodeStateInCurrentStep(from);
+    const toState = this.getNodeStateInCurrentStep(to);
+
+    // Edge is active if both nodes are visited or one is visited and other is open
+    if (fromState === 'visited' && toState === 'visited') {
+      return '#6366f1'; // primary-500
+    }
+    if (
+      (fromState === 'visited' && toState === 'open') ||
+      (fromState === 'open' && toState === 'visited')
+    ) {
+      return '#a5b4fc'; // primary-300
+    }
+
+    return '#d1d5db'; // gray-300
+  }
+
+  getEdgeWidth(edge: [number, number]): number {
+    if (!this.showStepMode()) return 2;
+
+    const [from, to] = edge;
+    const fromState = this.getNodeStateInCurrentStep(from);
+    const toState = this.getNodeStateInCurrentStep(to);
+
+    if (fromState === 'visited' && toState === 'visited') {
+      return 3;
+    }
+    if (
+      (fromState === 'visited' && toState === 'open') ||
+      (fromState === 'open' && toState === 'visited')
+    ) {
+      return 2.5;
+    }
+
+    return 1.5;
+  }
+
+  // ======================================================
   // GRAPH ALGORITHMS
   // ======================================================
 
@@ -552,6 +621,11 @@ export class Graph implements AfterViewInit {
 
     this.dfsResult.set(this.dfs(start));
     this.bfsResult.set([]);
+
+    // Enter step-by-step mode
+    this.currentStepIndex.set(0);
+    this.showStepMode.set(true);
+    this.algorithmType.set('dfs');
   }
 
   performBFS(): void {
@@ -566,6 +640,11 @@ export class Graph implements AfterViewInit {
 
     this.bfsResult.set(this.bfs(start));
     this.dfsResult.set([]);
+
+    // Enter step-by-step mode
+    this.currentStepIndex.set(0);
+    this.showStepMode.set(true);
+    this.algorithmType.set('bfs');
   }
 
   setStartNode(id: number): void {
@@ -576,6 +655,52 @@ export class Graph implements AfterViewInit {
     this.bfsResult.set([]);
     this.traversalSteps.set([]);
     this.algorithmMessage.set(`Start node set to ${id}`);
+  }
+
+  // ======================================================
+  // STEP-BY-STEP VISUALIZATION
+  // ======================================================
+
+  getNodeStateInCurrentStep(
+    nodeId: number
+  ): 'visited' | 'open' | 'closed' | 'unvisited' {
+    if (!this.showStepMode()) return 'unvisited';
+
+    const currentStep = this.traversalSteps()[this.currentStepIndex()];
+    if (!currentStep) return 'unvisited';
+
+    if (currentStep.visited.includes(nodeId)) return 'visited';
+    if (currentStep.open.includes(nodeId)) return 'open';
+    if (currentStep.closed.includes(nodeId)) return 'closed';
+
+    return 'unvisited';
+  }
+
+  nextStep(): void {
+    if (this.currentStepIndex() < this.traversalSteps().length - 1) {
+      this.currentStepIndex.update((i) => i + 1);
+      this.triggerStepAnimation();
+    }
+  }
+
+  previousStep(): void {
+    if (this.currentStepIndex() > 0) {
+      this.currentStepIndex.update((i) => i - 1);
+      this.triggerStepAnimation();
+    }
+  }
+
+  private triggerStepAnimation(): void {
+    // Small delay to ensure smooth CSS transitions
+    setTimeout(() => {
+      // Force a reflow to ensure transitions trigger
+    }, 10);
+  }
+
+  resetStepMode(): void {
+    this.currentStepIndex.set(0);
+    this.showStepMode.set(false);
+    this.algorithmType.set(null);
   }
 
   // ======================================================
@@ -755,6 +880,10 @@ export class Graph implements AfterViewInit {
     this.bfsResult.set([]);
     this.traversalSteps.set([]);
     this.algorithmMessage.set('');
+
+    this.currentStepIndex.set(0);
+    this.showStepMode.set(false);
+    this.algorithmType.set(null);
 
     this.editingNodeId.set(null);
     this.editingLabel.set('');
