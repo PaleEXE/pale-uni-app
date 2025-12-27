@@ -90,6 +90,18 @@ export class Graph implements AfterViewInit {
   readonly bfsResult = signal<number[]>([]);
   readonly algorithmMessage = signal('');
 
+  // Tracking algorithm state
+  readonly traversalSteps = signal<
+    Array<{
+      step: number;
+      nodeId: number;
+      nodeLabel: string;
+      visited: number[];
+      open: number[];
+      closed: number[];
+    }>
+  >([]);
+
   //--------------------------
   // Label Management
   //--------------------------
@@ -435,19 +447,44 @@ export class Graph implements AfterViewInit {
     const adj = this.buildAdjacencyList();
     const visited = new Set<number>();
     const result: number[] = [];
+    const steps: Array<{
+      step: number;
+      nodeId: number;
+      nodeLabel: string;
+      visited: number[];
+      open: number[];
+      closed: number[];
+    }> = [];
+    const open = new Set<number>([startId]);
+    const closed = new Set<number>();
 
     const visit = (id: number) => {
       visited.add(id);
+      open.delete(id);
       result.push(id);
+
+      const node = this.getNodeById(id);
+      steps.push({
+        step: steps.length + 1,
+        nodeId: id,
+        nodeLabel: node?.label || '',
+        visited: Array.from(visited).sort((a, b) => a - b),
+        open: Array.from(open).sort((a, b) => a - b),
+        closed: Array.from(closed).sort((a, b) => a - b),
+      });
 
       for (const n of adj.get(id) ?? []) {
         if (!visited.has(n)) {
+          open.add(n);
           visit(n);
         }
       }
+
+      closed.add(id);
     };
 
     visit(startId);
+    this.traversalSteps.set(steps);
     this.algorithmMessage.set('DFS traversal completed.');
     return result;
   }
@@ -458,21 +495,46 @@ export class Graph implements AfterViewInit {
     const visited = new Set<number>();
     const result: number[] = [];
     const queue: number[] = [startId];
+    const steps: Array<{
+      step: number;
+      nodeId: number;
+      nodeLabel: string;
+      visited: number[];
+      open: number[];
+      closed: number[];
+    }> = [];
+    const open = new Set<number>([startId]);
+    const closed = new Set<number>();
 
     visited.add(startId);
 
     while (queue.length) {
       const id = queue.shift()!;
       result.push(id);
+      open.delete(id);
+
+      const node = this.getNodeById(id);
+      steps.push({
+        step: steps.length + 1,
+        nodeId: id,
+        nodeLabel: node?.label || '',
+        visited: Array.from(visited).sort((a, b) => a - b),
+        open: Array.from(open).sort((a, b) => a - b),
+        closed: Array.from(closed).sort((a, b) => a - b),
+      });
 
       for (const n of adj.get(id) ?? []) {
         if (!visited.has(n)) {
           visited.add(n);
+          open.add(n);
           queue.push(n);
         }
       }
+
+      closed.add(id);
     }
 
+    this.traversalSteps.set(steps);
     this.algorithmMessage.set('BFS traversal completed.');
     return result;
   }
@@ -512,6 +574,7 @@ export class Graph implements AfterViewInit {
 
     this.dfsResult.set([]);
     this.bfsResult.set([]);
+    this.traversalSteps.set([]);
     this.algorithmMessage.set(`Start node set to ${id}`);
   }
 
@@ -690,6 +753,7 @@ export class Graph implements AfterViewInit {
 
     this.dfsResult.set([]);
     this.bfsResult.set([]);
+    this.traversalSteps.set([]);
     this.algorithmMessage.set('');
 
     this.editingNodeId.set(null);
