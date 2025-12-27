@@ -6,8 +6,9 @@ import {
   signal,
   effect,
   inject,
+  PLATFORM_ID,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Location } from '@angular/common';
 import { GraphService, SavedVisualResponse } from '../services/graph.service';
@@ -137,6 +138,10 @@ export class Graph implements AfterViewInit {
   readonly savingCorrections = signal(false);
   readonly correctionsMessage = signal<string | null>(null);
 
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
+  private isInitializingFromStorage = true;
+
   constructor(
     private location: Location,
     private graphService: GraphService,
@@ -158,6 +163,21 @@ export class Graph implements AfterViewInit {
         this.startNodeModel = null;
       }
     });
+
+    // Auto-save to localStorage whenever graph data changes
+    effect(() => {
+      this.nodes();
+      this.edges();
+      this.dfsResult();
+      this.bfsResult();
+      this.traversalSteps();
+      this.startNodeId();
+      this.algorithmType();
+      this.currentStepIndex();
+      this.showStepMode();
+
+      this.saveToLocalStorage();
+    });
   }
 
   // ======================================================
@@ -168,6 +188,9 @@ export class Graph implements AfterViewInit {
     const el = this.plotAreaRef.nativeElement;
     this.width.set(el.offsetWidth);
     this.height.set(el.offsetHeight);
+
+    // Load data from localStorage after view is initialized
+    this.loadFromLocalStorage();
   }
 
   // ======================================================
@@ -892,6 +915,9 @@ export class Graph implements AfterViewInit {
 
     this.uploadError.set(null);
     this.uploadSuccess.set(null);
+
+    // Clear localStorage when resetting
+    this.clearLocalStorage();
   }
 
   back(): void {
@@ -1072,5 +1098,128 @@ export class Graph implements AfterViewInit {
           this.savingCorrections.set(false);
         },
       });
+  }
+
+  // ======================================================
+  // LOCAL STORAGE
+  // ======================================================
+
+  private readonly STORAGE_KEY = 'graph_builder_state';
+
+  private saveToLocalStorage(): void {
+    if (!this.isBrowser) return;
+    if (this.isInitializingFromStorage) return;
+
+    const state = {
+      nodes: this.nodes(),
+      edges: this.edges(),
+      dfsResult: this.dfsResult(),
+      bfsResult: this.bfsResult(),
+      traversalSteps: this.traversalSteps(),
+      startNodeId: this.startNodeId(),
+      algorithmType: this.algorithmType(),
+      currentStepIndex: this.currentStepIndex(),
+      showStepMode: this.showStepMode(),
+      algorithmMessage: this.algorithmMessage(),
+      nextNodeId: this.nextNodeId,
+      nodeSize: this.nodeSize(),
+    };
+
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+      console.log('Saved to localStorage');
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+  }
+
+  private loadFromLocalStorage(): void {
+    if (!this.isBrowser) return;
+
+    try {
+      const savedState = localStorage.getItem(this.STORAGE_KEY);
+
+      if (!savedState) {
+        console.log('No saved state found in localStorage');
+        this.isInitializingFromStorage = false;
+        return;
+      }
+
+      const state = JSON.parse(savedState);
+      console.log('Found saved state:', state);
+
+      // Restore graph data
+      if (state.nodes && Array.isArray(state.nodes)) {
+        this.nodes.set(state.nodes);
+      }
+
+      if (state.edges && Array.isArray(state.edges)) {
+        this.edges.set(state.edges);
+      }
+
+      // Restore algorithm results
+      if (state.dfsResult && Array.isArray(state.dfsResult)) {
+        this.dfsResult.set(state.dfsResult);
+      }
+
+      if (state.bfsResult && Array.isArray(state.bfsResult)) {
+        this.bfsResult.set(state.bfsResult);
+      }
+
+      // Restore traversal steps
+      if (state.traversalSteps && Array.isArray(state.traversalSteps)) {
+        this.traversalSteps.set(state.traversalSteps);
+      }
+
+      // Restore traversal state
+      if (state.startNodeId !== undefined && state.startNodeId !== null) {
+        this.startNodeId.set(state.startNodeId);
+        this.startNodeModel = state.startNodeId;
+      }
+
+      if (state.algorithmType) {
+        this.algorithmType.set(state.algorithmType);
+      }
+
+      if (state.currentStepIndex !== undefined) {
+        this.currentStepIndex.set(state.currentStepIndex);
+      }
+
+      if (state.showStepMode !== undefined) {
+        this.showStepMode.set(state.showStepMode);
+      }
+
+      if (state.algorithmMessage) {
+        this.algorithmMessage.set(state.algorithmMessage);
+      }
+
+      // Restore other settings
+      if (state.nextNodeId !== undefined) {
+        this.nextNodeId = state.nextNodeId;
+      }
+
+      if (state.nodeSize !== undefined) {
+        this.nodeSize.set(state.nodeSize);
+      }
+
+      console.log('Successfully loaded state from localStorage');
+
+      // After loading is complete, allow auto-save to work
+      this.isInitializingFromStorage = false;
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+      this.isInitializingFromStorage = false;
+    }
+  }
+
+  clearLocalStorage(): void {
+    if (!this.isBrowser) return;
+
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+      console.log('Cleared localStorage');
+    } catch (error) {
+      console.error('Error clearing localStorage:', error);
+    }
   }
 }
