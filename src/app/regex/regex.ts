@@ -65,6 +65,10 @@ I just need a hit of your lovedrug`;
     if (this.pattern === '/HAMZA$/') {
       window.open('https://www.youtube.com/watch?v=j0Ftjz2fw7w', '_blank');
     }
+    if (this.pattern === '/ANCELOTTI/') {
+      window.open('https://www.youtube.com/watch?v=bDtjO-R0QSo', '_blank');
+    }
+
     try {
       const flagsStr =
         (this.flags.global ? 'g' : '') +
