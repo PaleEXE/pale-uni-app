@@ -7,12 +7,11 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-logic-evaluator',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './logic-evaluator.html',
   styleUrl: './logic-evaluator.css',
 })

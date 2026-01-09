@@ -131,11 +131,6 @@
         </div>
         }
       </div>
-
-      <!-- Back Button -->
-      <button class="pale-button w-full mt-auto" [routerLink]="['/topic/0']">
-        Back
-      </button>
     </div>
 
     <!-- Results Area -->
@@ -177,9 +172,9 @@
               }
             </tr>
           </thead>
-          <tbody>
+          <tbody class="bg-primary-100">
             @for (row of data(); track $index) {
-            <tr class="border-b border-primary-200 hover:bg-primary-100">
+            <tr class="border-b border-primary-200 hover:bg-primary-200">
               @for (value of row; track $index) {
               <td
                 class="px-6 py-3 text-sm text-primary-700 text-center border border-primary-300 whitespace-nowrap"
