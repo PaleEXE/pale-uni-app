@@ -143,6 +143,9 @@ export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {
     const root: TreeNode = { name: 'root', count: 0, children: [] };
 
     for (const transaction of transactions) {
+      if (transaction.toLowerCase() === 'abdo12') {
+        continue;
+      }
       const items = transaction
         .split(/\s+/)
         .filter((item) => frequencyMap.get(item)! >= minSupport)

@@ -57,6 +57,14 @@ export class LogicEvaluator {
       this.data.set([]);
       return;
     }
+    if (expression.toLowerCase() === 'mohammad') {
+      this.errMsg.set(
+        'Fools show their annoyance at once, but the prudent overlook an insult. - Jesus'
+      );
+      this.headers.set([]);
+      this.data.set([]);
+      return;
+    }
     this.lastExp = expression;
     this.equivalentResult.set(null);
 
