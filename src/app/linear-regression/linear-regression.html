@@ -1,106 +1,166 @@
 <div class="flex flex-col justify-center items-center h-full">
-  <!-- Header -->
   <div class="flex justify-center items-center h-6 mb-8 mt-6">
     <h1 class="text-3xl font-bold text-primary-700">Linear Regression</h1>
   </div>
 
-  <div class="flex">
-    <!-- Sidebar Controls -->
+  <div class="flex gap-4 items-start">
     <div
-      class="flex flex-col gap-6 m-6 w-64 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow"
+      class="flex flex-col gap-6 w-72 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow shrink-0"
     >
       <div>
-        <h2 class="text-lg font-semibold mb-4 text-primary-700">Statistics</h2>
-        <div class="space-y-3">
-          <div
-            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
+        <h3 class="text-sm font-semibold mb-2 text-primary-700">Interaction</h3>
+        <div class="flex bg-primary-200 p-1 rounded-md">
+          <button
+            class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
+            [class.bg-white]="interactionMode() === 'draw'"
+            [class.text-primary-700]="interactionMode() === 'draw'"
+            [class.text-primary-500]="interactionMode() !== 'draw'"
+            (click)="interactionMode.set('draw')"
           >
-            <p class="text-sm text-primary-600"><strong>Slope:</strong></p>
-            <p class="text-lg font-bold text-primary-700">
-              {{ slope() | number:'1.2-2' }}
-            </p>
+            DRAW
+          </button>
+          <button
+            class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
+            [class.bg-white]="interactionMode() === 'pan'"
+            [class.text-primary-700]="interactionMode() === 'pan'"
+            [class.text-primary-500]="interactionMode() !== 'pan'"
+            (click)="interactionMode.set('pan')"
+          >
+            PAN
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-semibold mb-2 text-primary-700">Metrics</h3>
+        <div class="space-y-2">
+          <div
+            class="bg-white/60 p-2 rounded border border-primary-200 flex justify-between"
+          >
+            <span class="text-xs text-primary-600 font-bold">Equation</span>
+            <span class="text-xs font-mono font-bold text-primary-800"
+              >{{ equationString() }}</span
+            >
           </div>
-          <div
-            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
-          >
-            <p class="text-sm text-primary-600"><strong>Intercept:</strong></p>
-            <p class="text-lg font-bold text-primary-700">
-              {{ intercept() | number:'1.2-2' }}
-            </p>
-          </div>
-          <div
-            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
-          >
-            <p class="text-sm text-primary-600"><strong>MSE:</strong></p>
-            <p class="text-lg font-bold text-primary-700">
-              {{ mse() | number:'1.2-2' }}
-            </p>
-          </div>
-          <div
-            class="bg-white/80 p-3 rounded-md shadow-sm border border-primary-300"
-          >
-            <p class="text-sm text-primary-600">
-              <strong>Points Count:</strong>
-            </p>
-            <p class="text-lg font-bold text-primary-700">
-              {{ points().length }}
-            </p>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-white/60 p-2 rounded border border-primary-200">
+              <div class="text-[10px] text-primary-500">Slope</div>
+              <div class="text-sm font-bold text-primary-800">
+                {{ regressionStats().slope | number:'1.2-2' }}
+              </div>
+            </div>
+            <div class="bg-white/60 p-2 rounded border border-primary-200">
+              <div class="text-[10px] text-primary-500">MSE</div>
+              <div class="text-sm font-bold text-primary-800">
+                {{ regressionStats().mse | number:'1.2-2' }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Buttons -->
-      <button class="pale-button h-12" (click)="calculateRegression()">
-        Calculate
+      <div
+        class="flex items-center justify-between bg-white/40 p-2 rounded border border-primary-200"
+      >
+        <label class="text-xs font-bold text-primary-700 cursor-pointer"
+          >Show Residuals</label
+        >
+        <input
+          type="checkbox"
+          [checked]="showResiduals()"
+          (change)="showResiduals.set(!showResiduals())"
+          class="accent-primary-600 w-4 h-4 cursor-pointer"
+        />
+      </div>
+
+      <button class="pale-button mt-auto" (click)="reset()">
+        Clear Points
       </button>
-      <button class="pale-button h-12" (click)="reset()">Reset</button>
     </div>
 
-    <!-- Plot Area -->
     <div
+      class="relative h-[600px] w-[600px] bg-primary-50 border-2 border-primary-500 rounded-lg shadow overflow-hidden select-none"
       #plotArea
-      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden shadow"
-      [class.border-primary-500]="true"
+      [class.cursor-crosshair]="interactionMode() === 'draw'"
+      [class.cursor-move]="interactionMode() === 'pan'"
+      (wheel)="onWheel($event)"
       (mousedown)="onPlotMouseDown($event)"
-      (click)="onPlotClick($event)"
-      (mouseup)="onPlotMouseUp()"
-      (mouseleave)="onPlotMouseUp()"
-      (mousemove)="onPlotMouseMove($event)"
+      (mousemove)="onPlotMouseMoveLocal($event)"
+      (mouseleave)="onPlotLeave()"
+      (contextmenu)="$event.preventDefault()"
     >
-      <!-- Y-Axis -->
       <div
-        class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary-300 -translate-x-1/2"
+        class="absolute bg-primary-300 w-0.5 top-0 bottom-0"
+        [style.left.px]="toScreenX(0)"
+      ></div>
+      <div
+        class="absolute bg-primary-300 h-0.5 left-0 right-0"
+        [style.top.px]="toScreenY(0)"
       ></div>
 
-      <!-- X-Axis -->
-      <div
-        class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-300 -translate-y-1/2"
-      ></div>
+      <svg class="absolute inset-0 w-full h-full pointer-events-none z-10">
+        @for (tick of xTicks(); track tick) {
+        <g
+          [attr.transform]="'translate(' + toScreenX(tick) + ',' + (height() - 15) + ')'"
+        >
+          <line y1="-5" y2="0" class="stroke-primary-400" stroke-width="2" />
+          <text
+            y="12"
+            text-anchor="middle"
+            class="text-[10px] fill-primary-600 font-bold font-mono"
+          >
+            {{ tick | number:'1.0-1' }}
+          </text>
+        </g>
+        } @for (tick of yTicks(); track tick) {
+        <g [attr.transform]="'translate(35,' + toScreenY(tick) + ')'">
+          <line x1="-5" x2="0" class="stroke-primary-400" stroke-width="2" />
+          <text
+            x="-8"
+            dy="4"
+            text-anchor="end"
+            class="text-[10px] fill-primary-600 font-bold font-mono"
+          >
+            {{ tick | number:'1.0-1' }}
+          </text>
+        </g>
+        } @if (showResiduals() && regressionStats().valid) { @for (point of
+        points(); track $index) { @if (getResidual(point); as r) {
+        <line
+          [attr.x1]="r.x"
+          [attr.y1]="r.y1"
+          [attr.x2]="r.x"
+          [attr.y2]="r.y2"
+          class="stroke-primary-400"
+          stroke-width="1.5"
+          stroke-dasharray="4,4"
+        />
+        } } } @if (lineCoordinates; as l) {
+        <line
+          [attr.x1]="l.x1"
+          [attr.y1]="l.y1"
+          [attr.x2]="l.x2"
+          [attr.y2]="l.y2"
+          class="stroke-primary-700"
+          stroke-width="3"
+          stroke-dasharray="8,4"
+        />
+        }
+      </svg>
 
-      <!-- Points -->
       @for (point of points(); track $index) {
-        <div
-          class="absolute rounded-full bg-primary-500 border-2 border-primary-700 shadow-md hover:shadow-lg transition-shadow"
-          [style.width.px]="8"
-          [style.height.px]="8"
-          [style.left.px]="getPosX(point)"
-          [style.top.px]="getPosY(point)"
-        ></div>
-      }
-
-      <!-- Regression Line -->
-      @if (slope() !== 0 || intercept() !== 0) {
-        <svg class="absolute inset-0 w-full h-full pointer-events-none">
-          <line
-            [attr.x1]="getPosX([-width()/2, 0])"
-            [attr.y1]="getPosY([-width()/2, slope()*(-width()/2) + intercept()])"
-            [attr.x2]="getPosX([width()/2, 0])"
-            [attr.y2]="getPosY([width()/2, slope()*(width()/2) + intercept()])"
-            stroke="rgb(239, 68, 68)"
-            stroke-width="2"
-            stroke-dasharray="5,5"
-          />
-        </svg>
+      <div
+        class="absolute w-3 h-3 -ml-1.5 -mt-1.5 bg-primary-600 rounded-full border-2 border-primary-800 shadow-sm z-20 cursor-pointer hover:scale-125 transition-transform"
+        [style.left.px]="toScreenX(point[0])"
+        [style.top.px]="toScreenY(point[1])"
+        (contextmenu)="onDeletePoint($index, $event)"
+      ></div>
+      } @if (cursorPosition(); as pos) {
+      <div
+        class="absolute bottom-2 right-2 px-2 py-1 bg-white/80 border border-primary-300 text-primary-900 text-xs font-mono font-bold rounded shadow-sm z-30 pointer-events-none"
+      >
+        {{ pos[0] | number:'1.1-1' }}, {{ pos[1] | number:'1.1-1' }}
+      </div>
       }
     </div>
   </div>

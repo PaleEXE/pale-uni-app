@@ -1,8 +1,0 @@
-:host {
-  display: block;
-}
-
-button:hover {
-  cursor: pointer;
-  opacity: 0.8;
-}

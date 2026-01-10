@@ -1,200 +1,218 @@
 <div class="flex flex-col justify-center items-center h-full">
   <div class="flex justify-center items-center h-6 mb-8 mt-6">
-    <h1 class="text-3xl font-bold text-primary-700">Plot</h1>
+    <h1 class="text-3xl font-bold text-primary-700">Clustering</h1>
   </div>
-  <div class="flex">
-    <div
-      class="flex flex-col gap-6 m-6 w-64 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow"
-    >
-      <select
-        id="algorithm"
-        class="w-48 px-3 py-2 text-box bg-primary-400 text-white cursor-pointer hover:bg-primary-500"
-        [value]="selectedAlgorithm()"
-        (change)="selectedAlgorithm.set($any($event.target).value)"
-      >
-        <option value="kmeans">K-Means</option>
-        <option value="Agglomerative">Agglomerative</option>
-        <option value="DBSCAN">DBSCAN</option>
-      </select>
 
-      <!-- K-Means/Agglomerative Controls -->
-      @if (selectedAlgorithm() !== 'DBSCAN') {
-        <div>
-          <label for="clusterCount" class="font-medium mb-2 block"
-            >Number of Clusters:
-          </label>
-          <div class="flex items-center space-x-4">
+  <div class="flex gap-4 items-start">
+    <div
+      class="flex flex-col gap-6 w-72 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow shrink-0"
+    >
+      <div>
+        <h3 class="text-sm font-semibold mb-2 text-primary-700">Interaction</h3>
+        <div class="flex bg-primary-200 p-1 rounded-md mb-2">
+          <button
+            class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
+            [class.bg-white]="interactionMode() === 'draw'"
+            [class.text-primary-700]="interactionMode() === 'draw'"
+            [class.text-primary-500]="interactionMode() !== 'draw'"
+            (click)="interactionMode.set('draw')"
+          >
+            DRAW
+          </button>
+          <button
+            class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
+            [class.bg-white]="interactionMode() === 'pan'"
+            [class.text-primary-700]="interactionMode() === 'pan'"
+            [class.text-primary-500]="interactionMode() !== 'pan'"
+            (click)="interactionMode.set('pan')"
+          >
+            PAN
+          </button>
+        </div>
+        <button
+          (click)="deleteMode.set(!deleteMode())"
+          class="w-full text-xs font-bold py-1.5 rounded border transition-colors"
+          [class.bg-red-100]="deleteMode()"
+          [class.text-red-700]="deleteMode()"
+          [class.border-red-300]="deleteMode()"
+          [class.bg-white]="!deleteMode()"
+          [class.text-gray-500]="!deleteMode()"
+          [class.border-gray-200]="!deleteMode()"
+        >
+          {{ deleteMode() ? 'DELETE MODE ACTIVE' : 'Enable Delete Mode' }}
+        </button>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-semibold mb-2 text-primary-700">Algorithm</h3>
+        <select
+          class="w-full px-3 py-2 bg-primary-500 text-white rounded-md cursor-pointer text-sm font-bold mb-4 focus:outline-none focus:ring-2 focus:ring-primary-700"
+          [value]="selectedAlgorithm()"
+          (change)="selectedAlgorithm.set($any($event.target).value)"
+        >
+          <option value="kmeans">K-Means</option>
+          <option value="Agglomerative">Agglomerative</option>
+          <option value="DBSCAN">DBSCAN</option>
+        </select>
+
+        @if (selectedAlgorithm() !== 'DBSCAN') {
+        <div class="mb-2">
+          <div class="flex justify-between text-xs text-primary-700 mb-1">
+            <span>Clusters (k)</span>
+            <span class="font-bold">{{ clusterCount() }}</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            step="1"
+            [value]="clusterCount()"
+            (input)="clusterCount.set($any($event.target).valueAsNumber)"
+            class="slider"
+          />
+        </div>
+        } @if (selectedAlgorithm() === 'DBSCAN') {
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-xs text-primary-700 mb-1">
+              <span>Epsilon (eps)</span>
+              <span class="font-bold">{{ eps() | number:'1.1-1' }}</span>
+            </div>
             <input
-              id="clusterCount"
+              type="range"
+              min="0.1"
+              max="5.0"
+              step="0.1"
+              [value]="eps()"
+              (input)="eps.set($any($event.target).valueAsNumber)"
+              class="slider"
+            />
+          </div>
+          <div>
+            <div class="flex justify-between text-xs text-primary-700 mb-1">
+              <span>Min Samples</span>
+              <span class="font-bold">{{ minSamples() }}</span>
+            </div>
+            <input
               type="range"
               min="1"
               max="10"
               step="1"
-              [value]="clusterCount()"
-              (input)="clusterCount.set($any($event.target).valueAsNumber)"
+              [value]="minSamples()"
+              (input)="minSamples.set($any($event.target).valueAsNumber)"
               class="slider"
             />
-            <span
-              class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
-              >{{ clusterCount() }}</span
-            >
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              [checked]="showBorder()"
+              (change)="showBorder.set(!showBorder())"
+              class="accent-primary-600"
+            />
+            <label class="text-xs text-primary-700">Show eps radii</label>
           </div>
         </div>
-      }
-
-      <!-- DBSCAN Controls -->
-      @if (selectedAlgorithm() === 'DBSCAN') {
-        <div class="space-y-4">
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <label for="eps" class="font-medium flex">Epsilon (eps):</label>
-              <button 
-                (click)="showBorder.set(!showBorder())"
-                class="p-1 rounded hover:bg-primary-200 transition-colors"
-                [class.text-primary-600]="showBorder()"
-                [class.text-primary-400]="!showBorder()"
-                [attr.title]="showBorder() ? 'Hide borders' : 'Show borders'"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                        d="M12 16a4 4 0 100-8 4 4 0 000 8z" />
-                </svg>
-              </button>
-            </div>
-            <div class="flex items-center space-x-4">
-              <input
-                id="eps"
-                type="range"
-                min="0.1"
-                max="30.0"
-                step="0.1"
-                [value]="eps()"
-                (input)="eps.set($any($event.target).valueAsNumber)"
-                class="slider"
-              />
-              <span
-                class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
-                >{{ eps().toFixed(1) }}</span
-              >
-            </div>
-          </div>
-
-          <div>
-            <label for="minSamples" class="font-medium mb-2 block"
-              >Minimum Samples:
-            </label>
-            <div class="flex items-center space-x-4">
-              <input
-                id="minSamples"
-                type="range"
-                min="1"
-                max="20"
-                step="1"
-                [value]="minSamples()"
-                (input)="minSamples.set($any($event.target).valueAsNumber)"
-                class="slider"
-              />
-              <span
-                class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
-                >{{ minSamples() }}</span
-              >
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Point Size Slider -->
-      <div>
-        <label for="pointSize" class="font-medium mb-2 block"
-          >Point Size:
-        </label>
-        <div class="flex items-center space-x-4">
-          <input
-            id="pointSize"
-            type="range"
-            min="4"
-            max="20"
-            step="1"
-            [value]="pointSize()"
-            (input)="pointSize.set($any($event.target).valueAsNumber)"
-            class="slider"
-          />
-          <span
-            class="h-8 w-10 flex items-center justify-center text-center rounded-md bg-white/80 text-primary-700 font-semibold text-sm shadow-sm border border-primary-300"
-            >{{ pointSize() }}</span
-          >
-        </div>
+        }
       </div>
 
-      <button class="pale-button h-12" (click)="performClustering()">
-        Cluster
-      </button>
       <button
-        class="pale-button h-12"
-        [class.bg-red-600]="deleteMode()"
-        (click)="toggleDeleteMode()"
+        class="pale-button bg-primary-600 text-white hover:bg-primary-700 mt-2"
+        (click)="performClustering()"
       >
-        {{ deleteMode() ? 'Cancel Delete' : 'Delete Points' }}
+        Run Clustering
       </button>
-      <button class="pale-button h-12" (click)="reset()">Reset</button>
+
+      <button class="pale-button mt-auto" (click)="reset()">
+        Clear Points
+      </button>
     </div>
 
     <div
+      class="relative h-[600px] w-[600px] bg-primary-50 border-2 rounded-lg shadow overflow-hidden select-none"
       #plotArea
-      class="relative w-142 h-142 border-2 border-primary-500 bg-primary-50 rounded-lg z-10 overflow-hidden shadow"
       [class.border-primary-500]="!deleteMode()"
       [class.border-red-500]="deleteMode()"
-      [class.cursor-crosshair]="deleteMode()"
+      [class.cursor-crosshair]="interactionMode() === 'draw' || deleteMode()"
+      [class.cursor-move]="interactionMode() === 'pan'"
+      (wheel)="onWheel($event)"
       (mousedown)="onPlotMouseDown($event)"
-      (click)="onPlotClick($event)"
-      (mouseup)="onPlotMouseUp()"
-      (mouseleave)="onPlotMouseUp()"
-      (mousemove)="onPlotMouseMove($event)"
+      (mousemove)="onPlotMouseMoveLocal($event)"
+      (mouseleave)="onPlotLeave()"
+      (contextmenu)="$event.preventDefault()"
     >
-      <!-- Y-Axis (Vertical line in center) -->
       <div
-        class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-primary-300 -translate-x-1/2"
+        class="absolute bg-primary-300 w-0.5 top-0 bottom-0"
+        [style.left.px]="toScreenX(0)"
+      ></div>
+      <div
+        class="absolute bg-primary-300 h-0.5 left-0 right-0"
+        [style.top.px]="toScreenY(0)"
       ></div>
 
-      <!-- X-Axis (Horizontal line in center) -->
-      <div
-        class="absolute top-1/2 left-0 right-0 h-0.5 bg-primary-300 -translate-y-1/2"
-      ></div>
-
-      <!-- Points -->
-      @for (point of points(); track $index) {
-        <div
-          class="absolute rounded-full"
-          [style.left.px]="getPointPosition(point).x"
-          [style.top.px]="getPointPosition(point).y"
-          [style.width.px]="pointSize()"
-          [style.height.px]="pointSize()"
-          [class]="getPointColor($index)"
-        ></div>
-        @if (selectedAlgorithm() === 'DBSCAN' && showBorder()) {
-          <div
-            class="point absolute rounded-full opacity-1"
-            [style.left.px]="getPointBorderPosition(point).x"
-            [style.top.px]="getPointBorderPosition(point).y"
-            [style.width.px]="borderSize()"
-            [style.height.px]="borderSize()"
-            [class]="getPointColor($index)"
-          ></div>
+      <svg class="absolute inset-0 w-full h-full pointer-events-none z-10">
+        @for (tick of xTicks(); track tick) {
+        <g
+          [attr.transform]="'translate(' + toScreenX(tick) + ',' + (height() - 15) + ')'"
+        >
+          <line y1="-5" y2="0" class="stroke-primary-400" stroke-width="2" />
+          <text
+            y="12"
+            text-anchor="middle"
+            class="text-[10px] fill-primary-600 font-bold font-mono"
+          >
+            {{ tick | number:'1.0-1' }}
+          </text>
+        </g>
+        } @for (tick of yTicks(); track tick) {
+        <g [attr.transform]="'translate(20,' + toScreenY(tick) + ')'">
+          <line x1="-5" x2="0" class="stroke-primary-400" stroke-width="2" />
+          <text
+            x="-8"
+            dy="4"
+            text-anchor="end"
+            class="text-[10px] fill-primary-600 font-bold font-mono"
+          >
+            {{ tick | number:'1.0-1' }}
+          </text>
+        </g>
         }
-      }
+      </svg>
 
-      <!-- Centroids -->
-      @for (centroid of centroids(); track $index) {
-        <div
-          class="absolute rounded-full border-2 border-white"
-          [style.left.px]="getPointPosition(centroid).x - pointSize() / 2"
-          [style.top.px]="getPointPosition(centroid).y - pointSize() / 2"
-          [style.width.px]="pointSize() * 2"
-          [style.height.px]="pointSize() * 2"
-          [class]="getCentroidColor($index)"
-        ></div>
+      @if (selectedAlgorithm() === 'DBSCAN' && showBorder()) { @for (point of
+      points(); track $index) {
+      <div
+        class="absolute rounded-full opacity-1 pointer-events-none z-10"
+        [class]="getPointColor($index)"
+        [style.width.px]="pixelEps()"
+        [style.height.px]="pixelEps()"
+        [style.left.px]="toScreenX(point[0]) - pixelEps()/2"
+        [style.top.px]="toScreenY(point[1]) - pixelEps()/2"
+      ></div>
+      } } @for (point of points(); track $index) {
+      <div
+        class="absolute rounded-full shadow-sm z-20 cursor-pointer hover:scale-125 transition-transform"
+        [class]="getPointColor($index)"
+        [style.width.px]="pointSize()"
+        [style.height.px]="pointSize()"
+        [style.left.px]="toScreenX(point[0]) - pointSize()/2"
+        [style.top.px]="toScreenY(point[1]) - pointSize()/2"
+      ></div>
+      } @for (centroid of centroids(); track $index) {
+      <div
+        class="absolute rounded-full border-2 border-white shadow-md z-30 pointer-events-none"
+        [class]="getCentroidColor($index)"
+        [style.width.px]="pointSize() * 2"
+        [style.height.px]="pointSize() * 2"
+        [style.left.px]="toScreenX(centroid[0]) - pointSize()"
+        [style.top.px]="toScreenY(centroid[1]) - pointSize()"
+      ></div>
+      } @if (cursorPosition(); as pos) {
+      <div
+        class="absolute bottom-2 right-2 px-2 py-1 bg-white/80 border border-primary-300 text-primary-900 text-xs font-mono font-bold rounded shadow-sm z-30 pointer-events-none"
+      >
+        {{ pos[0] | number:'1.1-1' }}, {{ pos[1] | number:'1.1-1' }}
+      </div>
       }
     </div>
   </div>
