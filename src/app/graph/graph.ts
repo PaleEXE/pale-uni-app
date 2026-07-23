@@ -266,6 +266,12 @@ export class Graph implements AfterViewInit {
     };
 
     this.nodes.set([...this.nodes(), newNode]);
+
+    this.dfsResult.set([]);
+    this.bfsResult.set([]);
+    this.traversalSteps.set([]);
+    this.algorithmMessage.set('');
+    this.resetStepMode();
   }
 
   private deleteNode(nodeId: number): void {
@@ -277,6 +283,12 @@ export class Graph implements AfterViewInit {
     if (this.startNodeId() === nodeId) {
       this.startNodeId.set(null);
     }
+
+    this.dfsResult.set([]);
+    this.bfsResult.set([]);
+    this.traversalSteps.set([]);
+    this.algorithmMessage.set('');
+    this.resetStepMode();
   }
 
   onStartNodeChange(id: number | null | undefined): void {
@@ -355,6 +367,12 @@ export class Graph implements AfterViewInit {
 
     if (!exists) {
       this.edges.set([...this.edges(), [from, to]]);
+      
+      this.dfsResult.set([]);
+      this.bfsResult.set([]);
+      this.traversalSteps.set([]);
+      this.algorithmMessage.set('');
+      this.resetStepMode();
     }
 
     this.selectedNodeId.set(null);

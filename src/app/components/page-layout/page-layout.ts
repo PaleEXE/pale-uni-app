@@ -6,5 +6,5 @@ import { Component, Input } from '@angular/core';
   templateUrl: './page-layout.html',
 })
 export class PageLayoutComponent {
-  @Input({ required: true }) title!: string;
+  @Input({ required: true }) pageTitle!: string;
 }
