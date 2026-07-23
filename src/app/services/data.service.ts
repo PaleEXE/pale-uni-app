@@ -19,7 +19,7 @@ export const topics = [
   {
     title: 'Machine Learning',
     description: 'GIT GUD',
-    subtopics: ['Linear Regression'],
+    subtopics: ['Linear Regression', 'Deep Learning'],
   },
   {
     title: 'Natural Language Processing',

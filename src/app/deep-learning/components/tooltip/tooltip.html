@@ -1,0 +1,20 @@
+@if (visible()) {
+  <div
+    class="tooltip-container"
+    [style.left.px]="posX()"
+    [style.top.px]="posY()"
+  >
+    <div class="tooltip-content">
+      <div class="tooltip-title">{{ title() }}</div>
+      @for (item of items(); track item.label) {
+        <div class="tooltip-row">
+          <span class="tooltip-label">{{ item.label }}:</span>
+          <span class="tooltip-value">{{ item.value }}</span>
+        </div>
+      }
+      @if (formula()) {
+        <div class="tooltip-formula">{{ formula() }}</div>
+      }
+    </div>
+  </div>
+}

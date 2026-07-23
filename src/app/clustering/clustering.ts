@@ -1,18 +1,19 @@
 import {
   Component,
   ViewChild,
-  ElementRef,
-  AfterViewInit,
-  OnDestroy,
   inject,
   signal,
   computed,
   PLATFORM_ID,
-  HostListener,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+
+import { PageLayoutComponent } from '../components/page-layout/page-layout';
+import { SidebarPanelComponent } from '../components/sidebar-panel/sidebar-panel';
+import { ModeToggleComponent } from '../components/mode-toggle/mode-toggle';
+import { PlotCanvasComponent } from '../components/plot-canvas/plot-canvas';
 
 type AlgorithmType = 'kmeans' | 'Agglomerative' | 'DBSCAN';
 type Point = [number, number];
@@ -71,25 +72,25 @@ const STORAGE_KEYS = {
 @Component({
   selector: 'app-clustering',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PageLayoutComponent,
+    SidebarPanelComponent,
+    ModeToggleComponent,
+    PlotCanvasComponent,
+  ],
   templateUrl: './clustering.html',
-  // Styles removed as requested
 })
-export class Clustering implements AfterViewInit, OnDestroy {
-  @ViewChild('plotArea') plotAreaRef!: ElementRef<HTMLDivElement>;
+export class Clustering {
+  @ViewChild('canvas') canvas!: PlotCanvasComponent;
 
   private readonly http = inject(HttpClient);
   private readonly platformId = inject(PLATFORM_ID);
 
-  // --- Constants ---
-  readonly LIMIT_MIN = -1000;
-  readonly LIMIT_MAX = 1000;
-
   // --- UI State ---
-  readonly width = signal(0);
-  readonly height = signal(0);
-  readonly cursorPosition = signal<Point | null>(null);
   readonly interactionMode = signal<Mode>('draw');
+  readonly deleteMode = signal(false);
 
   // --- Clustering Config ---
   readonly selectedAlgorithm = signal<AlgorithmType>('kmeans');
@@ -98,202 +99,41 @@ export class Clustering implements AfterViewInit, OnDestroy {
   readonly minSamples = signal(2);
   readonly pointSize = signal(8);
   readonly showBorder = signal(true);
-  readonly deleteMode = signal(false);
 
   // --- Data State ---
   readonly points = signal<Point[]>([]);
   readonly centroids = signal<Point[]>([]);
   readonly labels = signal<(number | null)[]>([]);
 
-  // --- View State ---
-  readonly minX = signal(-10);
-  readonly maxX = signal(10);
-  readonly minY = signal(-10);
-  readonly maxY = signal(10);
-
-  // --- Internal ---
-  readonly isDragging = signal(false);
-  private lastMousePos = { x: 0, y: 0 };
-  private resizeObserver: ResizeObserver | null = null;
-
-  // --- Computed ---
   readonly isBrowser = computed(() => isPlatformBrowser(this.platformId));
-
-  readonly xTicks = computed(() =>
-    this.generateTicks(this.minX(), this.maxX())
-  );
-  readonly yTicks = computed(() =>
-    this.generateTicks(this.minY(), this.maxY())
-  );
-
-  readonly pixelEps = computed(() => {
-    if (this.width() === 0) return 0;
-    const rangeX = this.maxX() - this.minX();
-    const pixelsPerUnit = this.width() / rangeX;
-    return this.eps() * pixelsPerUnit * 2;
-  });
-
-  private generateTicks(min: number, max: number): number[] {
-    const range = max - min;
-    if (range <= 0 || !isFinite(range)) return [];
-    const targetTickCount = 5;
-    const rawStep = range / targetTickCount;
-    const mag = Math.floor(Math.log10(rawStep));
-    const step =
-      Math.pow(10, mag) * (Math.round(rawStep / Math.pow(10, mag)) || 1);
-    if (step <= 0 || !isFinite(step)) return [];
-    const start = Math.ceil(min / step) * step;
-    const ticks = [];
-    let safeGuard = 0;
-    for (let i = start; i <= max; i += step) {
-      if (safeGuard++ > 20) break;
-      ticks.push(parseFloat(i.toPrecision(10)));
-    }
-    return ticks;
-  }
 
   ngAfterViewInit(): void {
     if (this.isBrowser()) {
       this.loadFromLocalStorage();
-
-      this.resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.contentRect.width > 0) {
-            this.width.set(entry.contentRect.width);
-            this.height.set(entry.contentRect.height);
-          }
-        }
-      });
-      this.resizeObserver.observe(this.plotAreaRef.nativeElement);
     }
   }
 
   ngOnDestroy(): void {
     if (this.isBrowser()) {
       this.saveToLocalStorage();
-      if (this.resizeObserver) this.resizeObserver.disconnect();
     }
   }
 
-  @HostListener('document:mousemove', ['$event'])
-  onGlobalMouseMove(event: MouseEvent): void {
-    if (!this.isDragging()) return;
-
-    if (this.interactionMode() === 'pan') {
-      const dx = event.clientX - this.lastMousePos.x;
-      const dy = event.clientY - this.lastMousePos.y;
-      const rangeX = this.maxX() - this.minX();
-      const rangeY = this.maxY() - this.minY();
-      const shiftX = (dx / this.width()) * rangeX;
-      const shiftY = (dy / this.height()) * rangeY;
-
-      let newMinX = this.minX() - shiftX;
-      let newMaxX = this.maxX() - shiftX;
-      let newMinY = this.minY() + shiftY;
-      let newMaxY = this.maxY() + shiftY;
-
-      if (newMinX < this.LIMIT_MIN) {
-        const d = this.LIMIT_MIN - newMinX;
-        newMinX += d;
-        newMaxX += d;
-      } else if (newMaxX > this.LIMIT_MAX) {
-        const d = this.LIMIT_MAX - newMaxX;
-        newMinX += d;
-        newMaxX += d;
-      }
-      if (newMinY < this.LIMIT_MIN) {
-        const d = this.LIMIT_MIN - newMinY;
-        newMinY += d;
-        newMaxY += d;
-      } else if (newMaxY > this.LIMIT_MAX) {
-        const d = this.LIMIT_MAX - newMaxY;
-        newMinY += d;
-        newMaxY += d;
-      }
-
-      this.minX.set(newMinX);
-      this.maxX.set(newMaxX);
-      this.minY.set(newMinY);
-      this.maxY.set(newMaxY);
-      this.lastMousePos = { x: event.clientX, y: event.clientY };
-    } else if (
-      this.interactionMode() === 'draw' &&
-      this.isTargetInPlot(event.target)
-    ) {
-      this.handleDrawOrDelete(event);
-    }
+  pixelEps(): number {
+    if (!this.canvas) return 0;
+    const w = this.canvas.width();
+    if (w === 0) return 0;
+    const rangeX = this.canvas.maxX() - this.canvas.minX();
+    const pixelsPerUnit = w / rangeX;
+    return this.eps() * pixelsPerUnit * 2;
   }
 
-  @HostListener('document:mouseup')
-  onGlobalMouseUp(): void {
-    this.isDragging.set(false);
-  }
-
-  onPlotMouseDown(event: MouseEvent): void {
-    if (event.button !== 0) return;
-    this.isDragging.set(true);
-    this.lastMousePos = { x: event.clientX, y: event.clientY };
-
-    if (this.interactionMode() === 'draw') {
-      this.handleDrawOrDelete(event);
-    }
-  }
-
-  onPlotMouseMoveLocal(event: MouseEvent): void {
-    const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
-    this.cursorPosition.set([
-      this.toDataX(event.clientX - rect.left),
-      this.toDataY(event.clientY - rect.top),
-    ]);
-  }
-
-  onPlotLeave(): void {
-    this.cursorPosition.set(null);
-  }
-
-  onWheel(event: WheelEvent): void {
-    event.preventDefault();
-    const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-
-    const dataX = this.toDataX(mouseX);
-    const dataY = this.toDataY(mouseY);
-    const zoom = event.deltaY > 0 ? 1.1 : 0.9;
-
-    const newRangeX = (this.maxX() - this.minX()) * zoom;
-    const newRangeY = (this.maxY() - this.minY()) * zoom;
-
-    if (newRangeX < 0.00001 || newRangeY < 0.00001) return;
-
-    const ratioX = mouseX / this.width();
-    const ratioY = 1 - mouseY / this.height();
-
-    let nextMinX = dataX - ratioX * newRangeX;
-    let nextMaxX = dataX + (1 - ratioX) * newRangeX;
-    let nextMinY = dataY - ratioY * newRangeY;
-    let nextMaxY = dataY + (1 - ratioY) * newRangeY;
-
-    if (nextMinX < this.LIMIT_MIN) nextMinX = this.LIMIT_MIN;
-    if (nextMaxX > this.LIMIT_MAX) nextMaxX = this.LIMIT_MAX;
-    if (nextMinY < this.LIMIT_MIN) nextMinY = this.LIMIT_MIN;
-    if (nextMaxY > this.LIMIT_MAX) nextMaxY = this.LIMIT_MAX;
-
-    this.minX.set(nextMinX);
-    this.maxX.set(nextMaxX);
-    this.minY.set(nextMinY);
-    this.maxY.set(nextMaxY);
-  }
-
-  handleDrawOrDelete(event: MouseEvent): void {
-    const rect = this.plotAreaRef.nativeElement.getBoundingClientRect();
-    const x = this.toDataX(event.clientX - rect.left);
-    const y = this.toDataY(event.clientY - rect.top);
-
+  handlePlotClick(point: Point): void {
+    const [x, y] = point;
     if (this.deleteMode()) {
       const pxThreshold = 20;
       const dataThresholdX =
-        (pxThreshold / this.width()) * (this.maxX() - this.minX());
+        (pxThreshold / this.canvas.width()) * (this.canvas.maxX() - this.canvas.minX());
 
       let closestIndex = -1;
       let minDist = Infinity;
@@ -312,37 +152,15 @@ export class Clustering implements AfterViewInit, OnDestroy {
       }
     } else {
       if (
-        x >= this.LIMIT_MIN &&
-        x <= this.LIMIT_MAX &&
-        y >= this.LIMIT_MIN &&
-        y <= this.LIMIT_MAX
+        x >= this.canvas.LIMIT_MIN &&
+        x <= this.canvas.LIMIT_MAX &&
+        y >= this.canvas.LIMIT_MIN &&
+        y <= this.canvas.LIMIT_MAX
       ) {
         this.points.update((pts) => [...pts, [x, y]]);
         this.labels.update((lbls) => [...lbls, null]);
       }
     }
-  }
-
-  private isTargetInPlot(target: any): boolean {
-    return this.plotAreaRef.nativeElement.contains(target);
-  }
-
-  toScreenX(dataX: number): number {
-    return ((dataX - this.minX()) / (this.maxX() - this.minX())) * this.width();
-  }
-  toScreenY(dataY: number): number {
-    return (
-      this.height() -
-      ((dataY - this.minY()) / (this.maxY() - this.minY())) * this.height()
-    );
-  }
-  toDataX(screenX: number): number {
-    return this.minX() + (screenX / this.width()) * (this.maxX() - this.minX());
-  }
-  toDataY(screenY: number): number {
-    return (
-      this.maxY() - (screenY / this.height()) * (this.maxY() - this.minY())
-    );
   }
 
   getPointColor(index: number): string {

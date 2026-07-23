@@ -8,7 +8,6 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   selector: 'app-register',
   templateUrl: './register.html',
-  styleUrl: './register.css',
   imports: [CommonModule, FormsModule, RouterLink],
 })
 export class RegisterComponent implements OnInit {

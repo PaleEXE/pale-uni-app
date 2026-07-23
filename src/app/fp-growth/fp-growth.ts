@@ -12,6 +12,9 @@ import { PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as d3 from 'd3';
 
+import { PageLayoutComponent } from '../components/page-layout/page-layout';
+import { SidebarPanelComponent } from '../components/sidebar-panel/sidebar-panel';
+
 interface TreeNode {
   name: string;
   count: number;
@@ -23,7 +26,7 @@ interface TreeNode {
   selector: 'app-tree-graph',
   templateUrl: './fp-growth.html',
   styleUrls: ['./fp-growth.css'],
-  imports: [FormsModule],
+  imports: [FormsModule, PageLayoutComponent, SidebarPanelComponent],
   standalone: true,
 })
 export class FPGrowth implements OnInit, AfterViewInit, OnDestroy {

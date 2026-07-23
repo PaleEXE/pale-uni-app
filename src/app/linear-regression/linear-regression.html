@@ -1,34 +1,11 @@
-<div class="flex flex-col justify-center items-center h-full">
-  <div class="flex justify-center items-center h-6 mb-8 mt-6">
-    <h1 class="text-3xl font-bold text-primary-700">Linear Regression</h1>
-  </div>
-
+<app-page-layout title="Linear Regression">
   <div class="flex gap-4 items-start">
-    <div
-      class="flex flex-col gap-6 w-72 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow shrink-0"
-    >
+    <app-sidebar-panel>
       <div>
         <h3 class="text-sm font-semibold mb-2 text-primary-700">Interaction</h3>
-        <div class="flex bg-primary-200 p-1 rounded-md">
-          <button
-            class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
-            [class.bg-white]="interactionMode() === 'draw'"
-            [class.text-primary-700]="interactionMode() === 'draw'"
-            [class.text-primary-500]="interactionMode() !== 'draw'"
-            (click)="interactionMode.set('draw')"
-          >
-            DRAW
-          </button>
-          <button
-            class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
-            [class.bg-white]="interactionMode() === 'pan'"
-            [class.text-primary-700]="interactionMode() === 'pan'"
-            [class.text-primary-500]="interactionMode() !== 'pan'"
-            (click)="interactionMode.set('pan')"
-          >
-            PAN
-          </button>
-        </div>
+        <app-mode-toggle
+          [(interactionMode)]="interactionMode"
+        ></app-mode-toggle>
       </div>
 
       <div>
@@ -76,92 +53,54 @@
       <button class="pale-button mt-auto" (click)="reset()">
         Clear Points
       </button>
-    </div>
+    </app-sidebar-panel>
 
-    <div
-      class="relative h-[600px] w-[600px] bg-primary-50 border-2 border-primary-500 rounded-lg shadow overflow-hidden select-none"
-      #plotArea
-      [class.cursor-crosshair]="interactionMode() === 'draw'"
-      [class.cursor-move]="interactionMode() === 'pan'"
-      (wheel)="onWheel($event)"
-      (mousedown)="onPlotMouseDown($event)"
-      (mousemove)="onPlotMouseMoveLocal($event)"
-      (mouseleave)="onPlotLeave()"
-      (contextmenu)="$event.preventDefault()"
+    <app-plot-canvas
+      #canvas="plotCanvas"
+      [yTickOffset]="35"
+      borderClass="border-primary-500"
+      [interactionMode]="interactionMode()"
+      (plotClick)="handlePlotClick($event)"
     >
-      <div
-        class="absolute bg-primary-300 w-0.5 top-0 bottom-0"
-        [style.left.px]="toScreenX(0)"
-      ></div>
-      <div
-        class="absolute bg-primary-300 h-0.5 left-0 right-0"
-        [style.top.px]="toScreenY(0)"
-      ></div>
-
-      <svg class="absolute inset-0 w-full h-full pointer-events-none z-10">
-        @for (tick of xTicks(); track tick) {
-        <g
-          [attr.transform]="'translate(' + toScreenX(tick) + ',' + (height() - 15) + ')'"
-        >
-          <line y1="-5" y2="0" class="stroke-primary-400" stroke-width="2" />
-          <text
-            y="12"
-            text-anchor="middle"
-            class="text-[10px] fill-primary-600 font-bold font-mono"
-          >
-            {{ tick | number:'1.0-1' }}
-          </text>
-        </g>
-        } @for (tick of yTicks(); track tick) {
-        <g [attr.transform]="'translate(35,' + toScreenY(tick) + ')'">
-          <line x1="-5" x2="0" class="stroke-primary-400" stroke-width="2" />
-          <text
-            x="-8"
-            dy="4"
-            text-anchor="end"
-            class="text-[10px] fill-primary-600 font-bold font-mono"
-          >
-            {{ tick | number:'1.0-1' }}
-          </text>
-        </g>
-        } @if (showResiduals() && regressionStats().valid) { @for (point of
-        points(); track $index) { @if (getResidual(point); as r) {
-        <line
-          [attr.x1]="r.x"
-          [attr.y1]="r.y1"
-          [attr.x2]="r.x"
-          [attr.y2]="r.y2"
-          class="stroke-primary-400"
-          stroke-width="1.5"
-          stroke-dasharray="4,4"
-        />
-        } } } @if (lineCoordinates; as l) {
-        <line
-          [attr.x1]="l.x1"
-          [attr.y1]="l.y1"
-          [attr.x2]="l.x2"
-          [attr.y2]="l.y2"
-          class="stroke-primary-700"
-          stroke-width="3"
-          stroke-dasharray="8,4"
-        />
+      <ng-container svg-layer>
+        @if (showResiduals() && regressionStats().valid) { 
+          @for (point of points(); track $index) { 
+            @if (getResidual(point); as r) {
+              <svg:line
+                [attr.x1]="r.x"
+                [attr.y1]="r.y1"
+                [attr.x2]="r.x"
+                [attr.y2]="r.y2"
+                class="stroke-primary-400"
+                stroke-width="1.5"
+                stroke-dasharray="4,4"
+              />
+            } 
+          } 
+        } 
+        @if (lineCoordinates; as l) {
+          <svg:line
+            [attr.x1]="l.x1"
+            [attr.y1]="l.y1"
+            [attr.x2]="l.x2"
+            [attr.y2]="l.y2"
+            class="stroke-primary-700"
+            stroke-width="3"
+            stroke-dasharray="8,4"
+          />
         }
-      </svg>
+      </ng-container>
 
-      @for (point of points(); track $index) {
-      <div
-        class="absolute w-3 h-3 -ml-1.5 -mt-1.5 bg-primary-600 rounded-full border-2 border-primary-800 shadow-sm z-20 cursor-pointer hover:scale-125 transition-transform"
-        [style.left.px]="toScreenX(point[0])"
-        [style.top.px]="toScreenY(point[1])"
-        (contextmenu)="onDeletePoint($index, $event)"
-      ></div>
-      } @if (cursorPosition(); as pos) {
-      <div
-        class="absolute bottom-2 right-2 px-2 py-1 bg-white/80 border border-primary-300 text-primary-900 text-xs font-mono font-bold rounded shadow-sm z-30 pointer-events-none"
-      >
-        {{ pos[0] | number:'1.1-1' }}, {{ pos[1] | number:'1.1-1' }}
-      </div>
-      }
-    </div>
+      <ng-container>
+        @for (point of points(); track $index) {
+          <div
+            class="absolute w-3 h-3 -ml-1.5 -mt-1.5 bg-primary-600 rounded-full border-2 border-primary-800 shadow-sm z-20 cursor-pointer hover:scale-125 transition-transform"
+            [style.left.px]="canvas.toScreenX(point[0])"
+            [style.top.px]="canvas.toScreenY(point[1])"
+            (contextmenu)="onDeletePoint($index, $event)"
+          ></div>
+        }
+      </ng-container>
+    </app-plot-canvas>
   </div>
-</div>
+</app-page-layout>

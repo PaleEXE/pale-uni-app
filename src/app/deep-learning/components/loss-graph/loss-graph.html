@@ -1,0 +1,89 @@
+<div class="loss-graph-container" #graphContainer>
+  <div class="graph-header">
+    <h3 class="graph-title">Loss Over Time</h3>
+    @if (currentLoss() > 0) {
+      <span class="current-loss">MSE: {{ currentLoss().toFixed(6) }}</span>
+    }
+  </div>
+  <svg #graphSvg [attr.width]="graphWidth()" [attr.height]="graphHeight()" class="loss-svg">
+    <!-- Grid lines -->
+    @for (tick of yTicks(); track tick) {
+      <svg:line
+        [attr.x1]="marginLeft"
+        [attr.y1]="scaleY(tick)"
+        [attr.x2]="graphWidth() - marginRight"
+        [attr.y2]="scaleY(tick)"
+        stroke="rgba(148,163,184,0.08)"
+        stroke-width="1"
+      />
+      <svg:text
+        [attr.x]="marginLeft - 6"
+        [attr.y]="scaleY(tick)"
+        text-anchor="end"
+        dominant-baseline="middle"
+        fill="#64748b"
+        font-size="9"
+        class="axis-label"
+      >
+        {{ formatTick(tick) }}
+      </svg:text>
+    }
+
+    <!-- X-axis labels -->
+    @for (tick of xTicks(); track tick) {
+      <svg:text
+        [attr.x]="scaleX(tick)"
+        [attr.y]="graphHeight() - marginBottom + 14"
+        text-anchor="middle"
+        fill="#64748b"
+        font-size="9"
+        class="axis-label"
+      >
+        {{ tick }}
+      </svg:text>
+    }
+
+    <!-- Loss line -->
+    @if (pathData()) {
+      <svg:path
+        [attr.d]="pathData()"
+        fill="none"
+        stroke="url(#lossGradient)"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="loss-line"
+      />
+
+      <!-- Gradient fill under the line -->
+      <svg:path
+        [attr.d]="areaData()"
+        fill="url(#areaGradient)"
+        class="loss-area"
+      />
+    }
+
+    <!-- Current value dot -->
+    @if (lossHistory().length > 0) {
+      <svg:circle
+        [attr.cx]="scaleX(lossHistory().length - 1)"
+        [attr.cy]="scaleY(lossHistory()[lossHistory().length - 1])"
+        r="4"
+        fill="var(--color-primary-500)"
+        class="current-dot"
+      />
+    }
+
+    <!-- Gradient definitions -->
+    <svg:defs>
+      <svg:linearGradient id="lossGradient" x1="0" y1="0" x2="1" y2="0">
+        <svg:stop offset="0%" stop-color="#f59e0b" />
+        <svg:stop offset="100%" stop-color="#ef4444" />
+      </svg:linearGradient>
+      <svg:linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+        <svg:stop offset="0%" stop-color="rgba(245,158,11,0.2)" />
+        <svg:stop offset="100%" stop-color="rgba(245,158,11,0)" />
+      </svg:linearGradient>
+    </svg:defs>
+  </svg>
+</div>

@@ -1,0 +1,35 @@
+<div>
+  <h3 class="text-sm font-semibold mb-2 text-primary-700">Interaction</h3>
+  <div class="flex bg-primary-200 p-1 rounded-md mb-2">
+    <button
+      class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
+      [class.bg-white]="interactionMode === 'draw'"
+      [class.text-primary-700]="interactionMode === 'draw'"
+      [class.text-primary-500]="interactionMode !== 'draw'"
+      (click)="interactionModeChange.emit('draw')"
+    >
+      DRAW
+    </button>
+    <button
+      class="flex-1 text-xs font-bold py-1.5 rounded transition-colors"
+      [class.bg-white]="interactionMode === 'pan'"
+      [class.text-primary-700]="interactionMode === 'pan'"
+      [class.text-primary-500]="interactionMode !== 'pan'"
+      (click)="interactionModeChange.emit('pan')"
+    >
+      PAN
+    </button>
+  </div>
+  <button
+    (click)="deleteModeChange.emit(!deleteMode)"
+    class="w-full text-xs font-bold py-1.5 rounded border transition-colors"
+    [class.bg-red-100]="deleteMode"
+    [class.text-red-700]="deleteMode"
+    [class.border-red-300]="deleteMode"
+    [class.bg-white]="!deleteMode"
+    [class.text-gray-500]="!deleteMode"
+    [class.border-gray-200]="!deleteMode"
+  >
+    {{ deleteMode ? 'DELETE MODE ACTIVE' : 'Enable Delete Mode' }}
+  </button>
+</div>

@@ -1,8 +1,8 @@
-<form (ngSubmit)="onRegister()" class="register-form">
-  <h2>Create Account</h2>
+<form (ngSubmit)="onRegister()" class="max-w-md mx-auto p-6 bg-white rounded-xl shadow-lg mt-10 space-y-6">
+  <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">Create Account</h2>
 
-  <div class="form-group">
-    <label for="username">Username</label>
+  <div class="space-y-2">
+    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
     <input
       id="username"
       type="text"
@@ -10,12 +10,12 @@
       name="username"
       placeholder="Choose a username"
       required
-      class="form-control"
+      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
     />
   </div>
 
-  <div class="form-group">
-    <label for="email">Email</label>
+  <div class="space-y-2">
+    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
     <input
       id="email"
       type="email"
@@ -23,12 +23,12 @@
       name="email"
       placeholder="Enter your email"
       required
-      class="form-control"
+      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
     />
   </div>
 
-  <div class="form-group">
-    <label for="password">Password</label>
+  <div class="space-y-2">
+    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
     <input
       id="password"
       type="password"
@@ -36,42 +36,42 @@
       name="password"
       placeholder="Create a password"
       required
-      class="form-control"
+      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
     />
   </div>
 
-  <div class="form-group">
-    <label for="phone">Phone Number (Optional)</label>
+  <div class="space-y-2">
+    <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (Optional)</label>
     <input
       id="phone"
       type="tel"
       [(ngModel)]="registerData.phone_number"
       name="phone_number"
       placeholder="Your phone number"
-      class="form-control"
+      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
     />
   </div>
 
-  <div class="form-group">
-    <label for="theme">Preferred Theme</label>
-    <select [(ngModel)]="registerData.preferred_theme" name="theme" class="form-control">
+  <div class="space-y-2">
+    <label for="theme" class="block text-sm font-medium text-gray-700">Preferred Theme</label>
+    <select [(ngModel)]="registerData.preferred_theme" name="theme" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white">
       <option value="light">Light</option>
       <option value="dark">Dark</option>
     </select>
   </div>
 
-  <button type="submit" [disabled]="isLoading" class="btn btn-primary">
+  <button type="submit" [disabled]="isLoading" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
     {{ isLoading ? 'Creating Account...' : 'Register' }}
   </button>
 
-  <div *ngIf="errorMessage" class="error-message">
+  <div *ngIf="errorMessage" class="p-3 text-sm text-red-600 bg-red-50 rounded-md">
     {{ errorMessage }}
   </div>
 
-  <div class="login-link">
+  <div class="text-center text-sm text-gray-600">
     <p>
       Already have an account?
-      <a routerLink="/login">Login here</a>
+      <a routerLink="/login" class="font-medium text-primary-600 hover:text-primary-500">Login here</a>
     </p>
   </div>
 </form>

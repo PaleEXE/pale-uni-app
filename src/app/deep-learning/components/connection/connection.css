@@ -1,0 +1,25 @@
+.connection-line {
+  transition: stroke 0.3s ease, stroke-width 0.3s ease;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.connection-line:hover {
+  stroke-opacity: 1 !important;
+  filter: brightness(1.3);
+}
+
+.weight-label {
+  pointer-events: none;
+  font-family: 'JetBrains Mono', monospace;
+  user-select: none;
+}
+
+.weight-bg {
+  pointer-events: none;
+}
+
+.data-particle {
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px currentColor);
+}

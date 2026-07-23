@@ -1,0 +1,76 @@
+<div class="neural-canvas-container" #canvasContainer>
+  <!-- SVG Network Visualization -->
+  <svg
+    [attr.width]="canvasWidth()"
+    [attr.height]="canvasHeight()"
+    class="neural-svg"
+    (mousemove)="onMouseMove($event)"
+    (mouseleave)="onMouseLeave()"
+  >
+    <!-- Background grid -->
+    <svg:defs>
+      <svg:pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <svg:path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.06)" stroke-width="1" />
+      </svg:pattern>
+    </svg:defs>
+    <svg:rect width="100%" height="100%" fill="url(#grid)" />
+
+    <!-- Layer labels -->
+    @for (label of layerLabels(); track label.x) {
+      <svg:text
+        [attr.x]="label.x"
+        y="28"
+        text-anchor="middle"
+        fill="#64748b"
+        font-size="11"
+        font-weight="600"
+        letter-spacing="0.05em"
+        class="layer-label"
+      >
+        {{ label.text }}
+      </svg:text>
+    }
+
+    <!-- Connections (rendered behind neurons) -->
+    @for (conn of connectionPositions(); track conn.connection.id) {
+      <svg:g
+        appConnection
+        [connection]="conn.connection"
+        [x1]="conn.x1"
+        [y1]="conn.y1"
+        [x2]="conn.x2"
+        [y2]="conn.y2"
+        [showWeight]="displayMode() === 'advanced'"
+        [showParticle]="conn.animating"
+        [particleProgress]="conn.particleProgress"
+        (mouseenter)="onConnectionHover($event, conn.connection)"
+        (mouseleave)="onConnectionLeave()"
+      />
+    }
+
+    <!-- Neurons -->
+    @for (pos of neuronPositions(); track pos.neuron.id) {
+      <svg:g
+        appNeuron
+        [neuron]="pos.neuron"
+        [x]="pos.x"
+        [y]="pos.y"
+        [showLabel]="true"
+        (mouseenter)="onNeuronHover($event, pos.neuron)"
+        (mouseleave)="onNeuronLeave()"
+        (mousedown)="onNeuronDragStart($event, pos.neuron)"
+        (click)="onNeuronClick(pos.neuron)"
+      />
+    }
+  </svg>
+
+  <!-- Tooltip overlay -->
+  <app-tooltip
+    [visible]="tooltipVisible()"
+    [posX]="tooltipX()"
+    [posY]="tooltipY()"
+    [title]="tooltipTitle()"
+    [items]="tooltipItems()"
+    [formula]="tooltipFormula()"
+  />
+</div>

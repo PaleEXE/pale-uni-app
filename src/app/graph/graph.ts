@@ -14,6 +14,10 @@ import { Location } from '@angular/common';
 import { GraphService, SavedVisualResponse } from '../services/graph.service';
 import { AuthService } from '../services/auth.service';
 import { HttpClientModule } from '@angular/common/http';
+import { ModalOverlayComponent } from '../components/modal-overlay/modal-overlay';
+import { AlertMessageComponent } from '../components/alert-message/alert-message';
+import { PageLayoutComponent } from '../components/page-layout/page-layout';
+import { SidebarPanelComponent } from '../components/sidebar-panel/sidebar-panel';
 
 type Point = [number, number];
 
@@ -27,7 +31,15 @@ interface GraphNode {
 @Component({
   selector: 'app-graph',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    HttpClientModule,
+    ModalOverlayComponent,
+    AlertMessageComponent,
+    PageLayoutComponent,
+    SidebarPanelComponent,
+  ],
   providers: [GraphService],
   templateUrl: './graph.html',
   styleUrl: './graph.css',

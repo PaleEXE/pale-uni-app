@@ -1,0 +1,93 @@
+<div class="deep-learning-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <span class="title-icon">🧠</span>
+        Deep Learning Under The Hood
+      </h1>
+      <p class="page-subtitle">
+        @if (displayMode() === 'beginner') {
+          Watch how a neural network learns step by step
+        } @else {
+          Interactive neural network with forward/backpropagation visualization
+        }
+      </p>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Network Visualization -->
+    <div class="canvas-area">
+      <app-neural-canvas
+        [network]="nnService.network()"
+        [displayMode]="displayMode()"
+        [animationState]="animationState()"
+        [animatingLayer]="animatingLayer()"
+        [animParticleProgress]="particleProgress()"
+        (neuronDrag)="onNeuronDrag($event)"
+      />
+    </div>
+
+    <!-- Control Panel Sidebar -->
+    <div class="sidebar">
+      <app-control-panel
+        [config]="nnService.config()"
+        [trainingState]="nnService.training()"
+        [trainingData]="nnService.trainingData()"
+        [displayMode]="displayMode()"
+        (forwardPass)="onForwardPass()"
+        (trainStep)="onTrainStep()"
+        (autoTrain)="onAutoTrain()"
+        (reset)="onReset()"
+        (modeToggle)="onModeToggle($event)"
+        (learningRateChange)="onLearningRateChange($event)"
+        (activationFnChange)="onActivationFnChange($event)"
+        (addLayer)="onAddLayer()"
+        (removeLayer)="onRemoveLayer()"
+        (layerSizeChange)="onLayerSizeChange($event)"
+        (speedChange)="onSpeedChange($event)"
+        (updateTrainingData)="onUpdateTrainingData($event)"
+        (runInference)="onRunInference($event)"
+      />
+    </div>
+  </div>
+
+  <!-- Loss Graph -->
+  <div class="graph-area">
+    <app-loss-graph
+      [lossHistory]="nnService.training().lossHistory"
+      [currentLoss]="nnService.training().currentLoss"
+    />
+  </div>
+
+  <!-- Node Editor Popover -->
+  @if (selectedNeuron(); as neuron) {
+    <div class="node-editor-overlay" (click)="onCloseNodeEditor()"></div>
+    <div class="node-editor-panel">
+      <div class="node-editor-header">
+        <h3 class="editor-title">Edit Neuron</h3>
+        <button class="close-btn" (click)="onCloseNodeEditor()">✕</button>
+      </div>
+      <div class="node-editor-content">
+        <div class="editor-row">
+          <label class="editor-label">Bias (b)</label>
+          <input type="number" step="0.1" [value]="neuron.bias" (change)="onBiasChange($event)" class="text-box w-full mt-1 p-2 bg-slate-800 text-white border-slate-600 focus:border-primary-500" />
+        </div>
+        
+        @if (selectedNeuronConnections().length > 0) {
+          <h4 class="editor-subtitle mt-4 mb-2">Incoming Weights</h4>
+          <div class="weights-list">
+            @for (conn of selectedNeuronConnections(); track conn.id) {
+              <div class="editor-row pb-2">
+                <label class="editor-label">From {{ conn.fromNeuronId }}</label>
+                <input type="number" step="0.1" [value]="conn.weight" (change)="onWeightChange(conn.id, $event)" class="text-box w-full mt-1 p-2 bg-slate-800 text-white border-slate-600 focus:border-primary-500" />
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

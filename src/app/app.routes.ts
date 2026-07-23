@@ -9,6 +9,7 @@ import { Graph } from './graph/graph';
 import { RegexComponent } from './regex/regex';
 import { LoginComponent } from './login/login';
 import { RegisterComponent } from './register/register';
+import { DeepLearningComponent } from './deep-learning/deep-learning';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -43,5 +44,10 @@ export const routes: Routes = [
   {
     path: 'topic/:topicId/regex',
     component: RegexComponent,
+  },
+  {
+    path: 'topic/:topicId/deep-learning',
+    component: DeepLearningComponent,
+    data: { prerender: false },
   },
 ];

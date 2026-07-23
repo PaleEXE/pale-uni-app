@@ -1,0 +1,60 @@
+<svg:g
+  class="neuron-group"
+  [attr.transform]="'translate(' + x() + ',' + y() + ')'"
+>
+  <!-- Glow filter for active neurons -->
+  <svg:defs>
+    <svg:filter [id]="'glow-' + neuron().id" x="-50%" y="-50%" width="200%" height="200%">
+      <svg:feGaussianBlur [attr.stdDeviation]="glowIntensity()" result="blur" />
+      <svg:feMerge>
+        <svg:feMergeNode in="blur" />
+        <svg:feMergeNode in="SourceGraphic" />
+      </svg:feMerge>
+    </svg:filter>
+  </svg:defs>
+
+  <!-- Outer ring (activation indicator) -->
+  <svg:circle
+    [attr.r]="radius + 4"
+    [attr.stroke]="ringColor()"
+    [attr.stroke-width]="isActive() ? 2 : 0"
+    fill="none"
+    class="neuron-ring"
+    [attr.stroke-dasharray]="isActive() ? 'none' : '4 2'"
+  />
+
+  <!-- Main neuron circle -->
+  <svg:circle
+    [attr.r]="radius"
+    [attr.fill]="fillColor()"
+    [attr.filter]="isActive() ? 'url(#glow-' + neuron().id + ')' : 'none'"
+    [attr.stroke]="strokeColor()"
+    stroke-width="2"
+    class="neuron-circle"
+  />
+
+  <!-- Activation value text -->
+  <svg:text
+    text-anchor="middle"
+    dominant-baseline="central"
+    [attr.fill]="textColor()"
+    class="neuron-value"
+    font-size="11"
+    font-weight="600"
+  >
+    {{ displayValue() }}
+  </svg:text>
+
+  <!-- Label below neuron (layer type indicator) -->
+  @if (showLabel()) {
+    <svg:text
+      text-anchor="middle"
+      [attr.y]="radius + 18"
+      fill="#94a3b8"
+      font-size="9"
+      class="neuron-label"
+    >
+      {{ labelText() }}
+    </svg:text>
+  }
+</svg:g>

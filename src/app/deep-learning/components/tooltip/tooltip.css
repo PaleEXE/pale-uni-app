@@ -1,0 +1,68 @@
+.tooltip-container {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  transform: translate(-50%, -100%) translateY(-12px);
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+.tooltip-content {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 140px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 1px rgba(148, 163, 184, 0.3);
+}
+
+.tooltip-title {
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+
+.tooltip-label {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.tooltip-value {
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.tooltip-formula {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  color: #f97316;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-style: italic;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) translateY(-12px);
+  }
+}

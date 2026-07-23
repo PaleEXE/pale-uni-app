@@ -1,0 +1,51 @@
+<!-- Connection line between neurons -->
+<svg:g class="connection-group">
+  <!-- Main connection line -->
+  <svg:line
+    [attr.x1]="x1()"
+    [attr.y1]="y1()"
+    [attr.x2]="x2()"
+    [attr.y2]="y2()"
+    [attr.stroke]="lineColor()"
+    [attr.stroke-width]="lineWidth()"
+    [attr.stroke-opacity]="opacity()"
+    class="connection-line"
+  />
+
+  <!-- Weight label at midpoint -->
+  @if (showWeight()) {
+    <svg:rect
+      [attr.x]="midX() - 18"
+      [attr.y]="midY() - 8"
+      width="36"
+      height="16"
+      rx="4"
+      fill="#0f172a"
+      fill-opacity="0.85"
+      class="weight-bg"
+    />
+    <svg:text
+      [attr.x]="midX()"
+      [attr.y]="midY()"
+      text-anchor="middle"
+      dominant-baseline="central"
+      [attr.fill]="lineColor()"
+      font-size="9"
+      font-weight="500"
+      class="weight-label"
+    >
+      {{ weightText() }}
+    </svg:text>
+  }
+
+  <!-- Animated particle for forward pass -->
+  @if (showParticle()) {
+    <svg:circle
+      [attr.cx]="particleX()"
+      [attr.cy]="particleY()"
+      r="4"
+      [attr.fill]="particleColor()"
+      class="data-particle"
+    />
+  }
+</svg:g>

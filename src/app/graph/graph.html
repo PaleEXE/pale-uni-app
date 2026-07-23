@@ -1,9 +1,4 @@
-<div class="flex flex-col justify-center items-center h-full">
-  <!-- Header -->
-  <div class="flex justify-center items-center h-6 mb-8 mt-6">
-    <h1 class="text-3xl font-bold text-primary-700">Graph Builder</h1>
-  </div>
-
+<app-page-layout title="Graph Builder">
   <!-- Hidden File Input -->
   <input
     #fileInput
@@ -13,12 +8,8 @@
     (change)="onFileSelected($event)"
   />
 
-  <div class="flex flex-col">
-    <div class="flex">
-      <!-- ================= SIDEBAR ================= -->
-      <div
-        class="flex flex-col gap-6 m-6 w-64 p-6 bg-primary-100 border border-primary-300 rounded-lg shadow h-fit overflow-y-auto"
-      >
+  <!-- ================= SIDEBAR ================= -->
+  <app-sidebar-panel>
         <!-- Info -->
         <div>
           <h2 class="text-lg font-semibold mb-4 text-primary-700">Info</h2>
@@ -82,17 +73,9 @@
           </button>
 
           @if (uploadSuccess()) {
-          <div
-            class="p-2 bg-green-100 border border-green-400 rounded text-xs text-green-800"
-          >
-            {{ uploadSuccess() }}
-          </div>
+            <app-alert-message type="success" [message]="uploadSuccess()!"></app-alert-message>
           } @if (uploadError()) {
-          <div
-            class="p-2 bg-red-100 border border-red-400 rounded text-xs text-red-800"
-          >
-            {{ uploadError() }}
-          </div>
+            <app-alert-message type="error" [message]="uploadError()!"></app-alert-message>
           }
         </div>
 
@@ -160,17 +143,9 @@
             </button>
 
             @if (saveSuccess()) {
-            <div
-              class="mt-2 p-2 bg-green-100 border border-green-400 rounded text-xs text-green-800"
-            >
-              {{ saveSuccess() }}
-            </div>
+              <app-alert-message type="success" [message]="saveSuccess()!"></app-alert-message>
             } @if (saveError()) {
-            <div
-              class="mt-2 p-2 bg-red-100 border border-red-400 rounded text-xs text-red-800"
-            >
-              {{ saveError() }}
-            </div>
+              <app-alert-message type="error" [message]="saveError()!"></app-alert-message>
             }
           </div>
 
@@ -182,10 +157,10 @@
             {{ showSavedVisuals() ? 'Hide Saved' : 'Load Graph' }}
           </button>
         </div>
-      </div>
+  </app-sidebar-panel>
 
-      <!-- ================= MAIN VIEW ================= -->
-      <div class="flex flex-col gap-6 mt-6 mr-6">
+  <!-- ================= MAIN VIEW ================= -->
+  <div class="flex flex-col gap-6 mt-6 mr-6">
         <!-- ============ PLOT AREA AND RIGHT PANEL ROW ============ -->
         <div class="flex flex-col gap-6 items-start w-full">
           <!-- ============ PLOT AREA AND RIGHT PANEL ROW ============ -->
@@ -254,11 +229,7 @@
                 }
 
                 <!-- Label Edit Modal -->
-                @if (editingNodeId() !== null) {
-                <div
-                  class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
-                  (click)="cancelEditingLabel()"
-                >
+                <app-modal-overlay [opened]="editingNodeId() !== null" (closed)="cancelEditingLabel()">
                   <div
                     class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500"
                     (click)="$event.stopPropagation()"
@@ -293,15 +264,10 @@
                       </button>
                     </div>
                   </div>
-                </div>
-                }
+                </app-modal-overlay>
 
                 <!-- Saved Graphs Modal -->
-                @if (showSavedVisuals()) {
-                <div
-                  class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
-                  (click)="showSavedVisuals.set(false)"
-                >
+                <app-modal-overlay [opened]="showSavedVisuals()" (closed)="showSavedVisuals.set(false)">
                   <div
                     class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500 w-96 max-h-96 overflow-y-auto"
                     (click)="$event.stopPropagation()"
@@ -359,8 +325,7 @@
                       Close
                     </button>
                   </div>
-                </div>
-                }
+                </app-modal-overlay>
               </div>
               <!-- ================= TRAVERSAL STEPS TABLE ================= -->
               @if (traversalSteps().length > 0) {
@@ -633,9 +598,7 @@
 
               }
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
+</app-page-layout>

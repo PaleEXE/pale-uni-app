@@ -1,0 +1,10 @@
+@if (opened) {
+<div
+  class="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
+  (click)="close()"
+>
+  <div (click)="$event.stopPropagation()">
+    <ng-content></ng-content>
+  </div>
+</div>
+}

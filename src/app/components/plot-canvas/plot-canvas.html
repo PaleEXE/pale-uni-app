@@ -1,0 +1,60 @@
+<div
+  class="relative h-[600px] w-[600px] bg-primary-50 border-2 rounded-lg shadow overflow-hidden select-none"
+  #plotArea
+  [class]="borderClass"
+  [class.cursor-crosshair]="interactionMode === 'draw' || deleteMode"
+  [class.cursor-move]="interactionMode === 'pan'"
+  (wheel)="onWheel($event)"
+  (mousedown)="onPlotMouseDown($event)"
+  (mousemove)="onPlotMouseMoveLocal($event)"
+  (mouseleave)="onPlotLeave()"
+  (contextmenu)="$event.preventDefault()"
+>
+  <div
+    class="absolute bg-primary-300 w-0.5 top-0 bottom-0"
+    [style.left.px]="toScreenX(0)"
+  ></div>
+  <div
+    class="absolute bg-primary-300 h-0.5 left-0 right-0"
+    [style.top.px]="toScreenY(0)"
+  ></div>
+
+  <svg class="absolute inset-0 w-full h-full pointer-events-none z-10">
+    @for (tick of xTicks(); track tick) {
+      <g [attr.transform]="'translate(' + toScreenX(tick) + ',' + (height() - 15) + ')'">
+        <line y1="-5" y2="0" class="stroke-primary-400" stroke-width="2" />
+        <text
+          y="12"
+          text-anchor="middle"
+          class="text-[10px] fill-primary-600 font-bold font-mono"
+        >
+          {{ tick | number:'1.0-1' }}
+        </text>
+      </g>
+    }
+    @for (tick of yTicks(); track tick) {
+      <g [attr.transform]="'translate(' + yTickOffset + ',' + toScreenY(tick) + ')'">
+        <line x1="-5" x2="0" class="stroke-primary-400" stroke-width="2" />
+        <text
+          x="-8"
+          dy="4"
+          text-anchor="end"
+          class="text-[10px] fill-primary-600 font-bold font-mono"
+        >
+          {{ tick | number:'1.0-1' }}
+        </text>
+      </g>
+    }
+    <ng-content select="[svg-layer]"></ng-content>
+  </svg>
+
+  <ng-content></ng-content>
+
+  @if (cursorPosition(); as pos) {
+    <div
+      class="absolute bottom-2 right-2 px-2 py-1 bg-white/80 border border-primary-300 text-primary-900 text-xs font-mono font-bold rounded shadow-sm z-30 pointer-events-none"
+    >
+      {{ pos[0] | number:'1.1-1' }}, {{ pos[1] | number:'1.1-1' }}
+    </div>
+  }
+</div>
