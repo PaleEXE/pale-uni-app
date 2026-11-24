@@ -1,28 +1,37 @@
-// src/app/interceptors/auth.interceptor.ts
-
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from './services/auth.service'; // Adjust path as needed
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
+import { AuthService } from './services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  // Use inject() to get the AuthService instance, even outside the constructor
   const authService = inject(AuthService);
-  const authToken = authService.currentToken; // Get the current token value
+  const router = inject(Router);
+  const authToken = authService.currentToken;
 
-  // Check if a token exists and if the request is for your API
-  if (authToken) {
-    // HttpRequest objects are immutable, so you must clone it to modify it.
-    const clonedRequest = req.clone({
-      setHeaders: {
-        // Set the Authorization header with the Bearer token format
-        Authorization: `Bearer ${authToken}`,
-      },
-    });
+  const requestToSend = authToken
+    ? req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      })
+    : req;
 
-    // Pass the cloned request to the next handler
-    return next(clonedRequest);
-  }
+  return next(requestToSend).pipe(
+    catchError((error: HttpErrorResponse) => {
+      const isAuthEndpoint =
+        req.url.includes('/auth/login') ||
+        req.url.includes('/auth/register') ||
+        req.url.includes('/auth/guest');
 
-  // If no token exists, or no modification is needed, pass the original request
-  return next(req);
+      if (error.status === 401 && !isAuthEndpoint) {
+        authService.handleSessionExpired();
+        router.navigate(['/login'], {
+          queryParams: { expired: 'true' },
+        });
+      }
+
+      return throwError(() => error);
+    })
+  );
 };

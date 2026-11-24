@@ -10,44 +10,53 @@ import { RegexComponent } from './regex/regex';
 import { LoginComponent } from './login/login';
 import { RegisterComponent } from './register/register';
 import { DeepLearningComponent } from './deep-learning/deep-learning';
+import { sessionGuard } from './guards/session.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'home', component: HomePage },
+  { path: 'home', component: HomePage, canActivate: [sessionGuard] },
   {
     path: 'topic/:topicId',
     component: Topic,
+    canActivate: [sessionGuard],
     data: { prerender: false },
   },
   {
     path: 'topic/:topicId/logic-evaluator',
     component: LogicEvaluator,
+    canActivate: [sessionGuard],
   },
   {
     path: 'topic/:topicId/clustering',
     component: Clustering,
+    canActivate: [sessionGuard],
   },
   {
     path: 'topic/:topicId/fp-growth',
     component: FPGrowth,
+    canActivate: [sessionGuard],
   },
   {
     path: 'topic/:topicId/linear-regression',
     component: LinearRegression,
+    canActivate: [sessionGuard],
   },
   {
     path: 'topic/:topicId/graph',
     component: Graph,
+    canActivate: [sessionGuard],
   },
   {
     path: 'topic/:topicId/regex',
     component: RegexComponent,
+    canActivate: [sessionGuard],
   },
   {
     path: 'topic/:topicId/deep-learning',
     component: DeepLearningComponent,
+    canActivate: [sessionGuard],
     data: { prerender: false },
   },
 ];

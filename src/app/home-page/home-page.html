@@ -1,12 +1,45 @@
 <div
-  class="flex flex-col items-center justify-center gap-12 text-center m-32 mt-24"
+  class="flex flex-col items-center justify-center gap-8 text-center px-6 mt-16 mb-16"
 >
-  <h1 class="text-6xl font-bold text-primary-700">{{'Welcome ' + username || 'GoAlgo'}}</h1>
-  <div class="flex flex-wrap justify-center gap-6 text-white font-bold">
+  <h1 class="text-5xl sm:text-6xl font-bold text-primary-700">
+    @if (sessionMode() === 'authenticated' && username()) {
+      Welcome {{ username() }}
+    } @else if (sessionMode() === 'guest') {
+      Welcome, Guest
+    } @else {
+      GoAlgo
+    }
+  </h1>
+
+  @if (sessionMode() === 'guest') {
+    <div
+      class="flex flex-wrap items-center justify-center gap-3 px-4 py-2.5 bg-primary-100 border border-primary-300 rounded-lg shadow-sm text-xs text-primary-800 max-w-2xl"
+    >
+      <span>
+        You are exploring in <strong>Guest Mode</strong>. All interactive tools are available; sign in to save visualizations permanently.
+      </span>
+      <div class="flex items-center gap-2">
+        <a
+          routerLink="/login"
+          class="px-3 py-1 rounded bg-primary-500 hover:bg-primary-600 text-white font-semibold transition"
+        >
+          Sign In
+        </a>
+        <a
+          routerLink="/register"
+          class="px-3 py-1 rounded border border-primary-400 bg-white hover:bg-primary-50 text-primary-700 font-semibold transition"
+        >
+          Create Account
+        </a>
+      </div>
+    </div>
+  }
+
+  <div class="flex flex-wrap justify-center gap-6 text-white font-bold mt-4">
     @for (topic of topics; track $index) {
-    <button class="big-button" [routerLink]="['/topic', $index]">
-      <h3>{{ topic.title }}</h3>
-    </button>
+      <button class="big-button" [routerLink]="['/topic', $index]">
+        <h3>{{ topic.title }}</h3>
+      </button>
     }
   </div>
 </div>

@@ -61,14 +61,16 @@ export class GraphService {
 
   constructor(private http: HttpClient) {}
 
-  extractGraph(file: File, userId: number): Observable<GraphResponse> {
+  extractGraph(file: File, userId?: number): Observable<GraphResponse> {
     const formData = new FormData();
     formData.append('file', file);
 
-    return this.http.post<GraphResponse>(
-      `${this.apiUrl}/graph/extract?user_id=${userId}`,
-      formData
-    );
+    const url =
+      userId !== undefined
+        ? `${this.apiUrl}/graph/extract?user_id=${userId}`
+        : `${this.apiUrl}/graph/extract`;
+
+    return this.http.post<GraphResponse>(url, formData);
   }
 
   checkHealth(): Observable<GraphHealthResponse> {

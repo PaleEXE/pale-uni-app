@@ -11,6 +11,7 @@ import {
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Location } from '@angular/common';
+import { Router } from '@angular/router';
 import { GraphService, SavedVisualResponse } from '../services/graph.service';
 import { AuthService } from '../services/auth.service';
 import { HttpClientModule } from '@angular/common/http';
@@ -150,6 +151,36 @@ export class Graph implements AfterViewInit {
   readonly savingCorrections = signal(false);
   readonly correctionsMessage = signal<string | null>(null);
 
+  //--------------------------
+  // Guest Auth Prompt
+  //--------------------------
+
+  readonly authPromptVisible = signal(false);
+  readonly authPromptAction = signal('');
+
+  get isGuest(): boolean {
+    return this.authService.isGuest();
+  }
+
+  openAuthPrompt(action: string): void {
+    this.authPromptAction.set(action);
+    this.authPromptVisible.set(true);
+  }
+
+  closeAuthPrompt(): void {
+    this.authPromptVisible.set(false);
+  }
+
+  goToAuth(mode: 'login' | 'register'): void {
+    this.authPromptVisible.set(false);
+    this.router.navigate([mode === 'login' ? '/login' : '/register'], {
+      queryParams: {
+        reason: 'auth_required',
+        returnUrl: this.router.url,
+      },
+    });
+  }
+
   private platformId = inject(PLATFORM_ID);
   private isBrowser = isPlatformBrowser(this.platformId);
   private isInitializingFromStorage = true;
@@ -157,7 +188,8 @@ export class Graph implements AfterViewInit {
   constructor(
     private location: Location,
     private graphService: GraphService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {
     effect(() => {
       this.startNodeModel = this.startNodeId();
@@ -786,13 +818,13 @@ export class Graph implements AfterViewInit {
     this.uploadSuccess.set(null);
 
     const user = this.authService.currentUserValue;
-    if (!user) {
-      this.uploadError.set('User not authenticated');
+    if (!user && !this.authService.isGuest()) {
       this.uploading.set(false);
+      this.openAuthPrompt('upload and extract graph images');
       return;
     }
 
-    this.graphService.extractGraph(file, user.user_id).subscribe({
+    this.graphService.extractGraph(file, user?.user_id).subscribe({
       next: (response) => {
         this.uploading.set(false);
 
@@ -816,8 +848,10 @@ export class Graph implements AfterViewInit {
 
         this.loadGraphFromResponse(response);
 
-        // Show label corrections modal
-        this.showLabelCorrections.set(true);
+        // Show label corrections modal for registered users only
+        if (user) {
+          this.showLabelCorrections.set(true);
+        }
 
         this.uploadSuccess.set(
           `Successfully extracted ${response.node_count} nodes and ${response.edge_count} edges!`
@@ -966,14 +1000,14 @@ export class Graph implements AfterViewInit {
   }
 
   saveCurrentGraph(): void {
-    if (!this.visualName() || this.visualName().trim() === '') {
-      this.saveError.set('Please enter a name for the visualization');
+    const user = this.authService.currentUserValue;
+    if (!user) {
+      this.openAuthPrompt('save visualizations permanently');
       return;
     }
 
-    const user = this.authService.currentUserValue;
-    if (!user) {
-      this.saveError.set('User not authenticated');
+    if (!this.visualName() || this.visualName().trim() === '') {
+      this.saveError.set('Please enter a name for the visualization');
       return;
     }
 
@@ -1004,7 +1038,7 @@ export class Graph implements AfterViewInit {
   loadSavedVisuals(): void {
     const user = this.authService.currentUserValue;
     if (!user) {
-      this.saveError.set('User not authenticated');
+      this.openAuthPrompt('view and load saved visualizations');
       return;
     }
 
@@ -1049,6 +1083,10 @@ export class Graph implements AfterViewInit {
   }
 
   deleteGraphFromSaved(visualId: number, visualName: string): void {
+    if (!this.authService.currentUserValue) {
+      this.openAuthPrompt('manage saved visualizations');
+      return;
+    }
     this.graphService.deleteSavedVisual(visualId).subscribe({
       next: () => {
         this.saveSuccess.set(`Graph ${visualName} deleted successfully`);
@@ -1063,6 +1101,10 @@ export class Graph implements AfterViewInit {
   }
 
   toggleSavedVisuals(): void {
+    if (!this.authService.currentUserValue) {
+      this.openAuthPrompt('view and load saved visualizations');
+      return;
+    }
     if (!this.showSavedVisuals()) {
       this.loadSavedVisuals();
     }
@@ -1090,8 +1132,12 @@ export class Graph implements AfterViewInit {
     const imagePath = this.uploadedImagePath();
     const user = this.authService.currentUserValue;
 
-    if (!imagePath || !user) {
-      this.correctionsMessage.set('Error: Missing image path or user info');
+    if (!user) {
+      this.openAuthPrompt('save label corrections');
+      return;
+    }
+    if (!imagePath) {
+      this.correctionsMessage.set('Error: Missing image path');
       return;
     }
 

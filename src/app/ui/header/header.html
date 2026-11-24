@@ -4,7 +4,7 @@
   <div class="flex items-center gap-2">
     <div
       class="flex items-center mr-8 text-xl font-bold cursor-pointer"
-      [routerLink]="['/']"
+      (click)="onLogoClick()"
     >
       <svg
         version="1.1"
@@ -122,14 +122,23 @@
       />
     </svg>
   </div>
-  <div class="flex items-center gap-4">
+
+  <div class="flex items-center gap-3">
+    @if (sessionMode() === 'guest') {
+      <span
+        class="px-2.5 py-1 rounded-md bg-primary-200 border border-primary-400 text-primary-800 text-xs font-bold"
+      >
+        Guest Mode
+      </span>
+    }
+
     <div>
-      <label for="themeSelect" class="mr-2 font-medium">Theme:</label>
+      <label for="themeSelect" class="mr-2 font-medium text-sm">Theme:</label>
       <select
         id="themeSelect"
         [(ngModel)]="selectedTheme"
         (ngModelChange)="onThemeChange($event)"
-        class="p-2 border rounded bg-primary-400 border-primary-500 text-white cursor-pointer hover:bg-primary-500"
+        class="p-1.5 border rounded bg-primary-400 border-primary-500 text-white text-sm cursor-pointer hover:bg-primary-500"
       >
         <optgroup label="Warm Colors">
           <option value="red">Red</option>
@@ -163,13 +172,27 @@
         </optgroup>
       </select>
     </div>
-    @if (isLoggedIn) {
-    <button
-      (click)="logout()"
-      class="px-4 py-2 rounded bg-primary-600 hover:bg-primary-700 text-white font-medium transition"
-    >
-      Logout
-    </button>
+
+    @if (sessionMode() === 'guest') {
+      <a
+        routerLink="/login"
+        class="px-3 py-1.5 rounded bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold transition"
+      >
+        Sign In
+      </a>
+      <a
+        routerLink="/register"
+        class="px-3 py-1.5 rounded border border-primary-400 bg-white hover:bg-primary-50 text-primary-700 text-xs font-semibold transition"
+      >
+        Register
+      </a>
+    } @else if (sessionMode() === 'authenticated') {
+      <button
+        (click)="logout()"
+        class="px-4 py-1.5 rounded bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium cursor-pointer transition"
+      >
+        Logout
+      </button>
     }
   </div>
 </header>

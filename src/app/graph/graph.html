@@ -125,6 +125,11 @@
             <h3 class="text-sm font-semibold text-primary-700 mb-2">
               Save Graph
             </h3>
+            @if (isGuest) {
+              <p class="text-[11px] text-primary-600 mb-2">
+                Sign in to save and load graphs permanently.
+              </p>
+            }
 
             <input
               type="text"
@@ -137,7 +142,7 @@
             <button
               class="pale-button h-10 w-full text-sm bg-green-600 text-white hover:bg-green-700"
               (click)="saveCurrentGraph()"
-              [disabled]="savingVisual() || nodes().length === 0"
+              [disabled]="!isGuest && (savingVisual() || nodes().length === 0)"
             >
               {{ savingVisual() ? 'Saving...' : 'Save Graph' }}
             </button>
@@ -324,6 +329,41 @@
                     >
                       Close
                     </button>
+                  </div>
+                </app-modal-overlay>
+
+                <!-- Guest Account Required Modal -->
+                <app-modal-overlay [opened]="authPromptVisible()" (closed)="closeAuthPrompt()">
+                  <div
+                    class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500 w-96 max-w-[90vw]"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <h3 class="text-lg font-bold text-primary-700 mb-2">
+                      Account Required
+                    </h3>
+                    <p class="text-sm text-primary-800 mb-4">
+                      You are currently browsing in <strong>Guest Mode</strong>. Please sign in or create an account to {{ authPromptAction() || 'use this feature' }}.
+                    </p>
+                    <div class="flex flex-col gap-2">
+                      <button
+                        class="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded cursor-pointer transition"
+                        (click)="goToAuth('login')"
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        class="w-full px-4 py-2 border-2 border-primary-400 bg-primary-50 hover:bg-primary-100 text-primary-700 text-sm font-semibold rounded cursor-pointer transition"
+                        (click)="goToAuth('register')"
+                      >
+                        Create Account
+                      </button>
+                      <button
+                        class="w-full mt-1 px-4 py-1.5 text-xs font-medium text-primary-600 hover:text-primary-800 cursor-pointer transition"
+                        (click)="closeAuthPrompt()"
+                      >
+                        Continue as Guest
+                      </button>
+                    </div>
                   </div>
                 </app-modal-overlay>
               </div>

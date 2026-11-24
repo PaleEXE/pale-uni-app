@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService, RegisterRequest } from '../services/auth.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -19,18 +19,27 @@ export class RegisterComponent implements OnInit {
     preferred_theme: 'light',
   };
 
-  isLoading = false;
+  isLoading = signal(false);
+  isGuestLoading = signal(false);
   errorMessage = '';
+  returnUrl = '/home';
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
-    // Redirect to home if already logged in
+    // Only redirect registered users; guests can register anytime
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/home']);
+      return;
+    }
+
+    const rawReturnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (rawReturnUrl && rawReturnUrl.startsWith('/')) {
+      this.returnUrl = rawReturnUrl;
     }
   }
 
@@ -49,22 +58,36 @@ export class RegisterComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.errorMessage = '';
 
     this.authService.register(this.registerData).subscribe({
-      next: (response) => {
-        this.isLoading = false;
-        console.log('Registration successful', response);
-        setTimeout(() => {
-          window.location.href = '/home';
-        }, 500);
+      next: () => {
+        this.isLoading.set(false);
+        this.router.navigateByUrl(this.returnUrl);
       },
       error: (error) => {
-        this.isLoading = false;
-        console.error('Registration failed', error);
+        this.isLoading.set(false);
         this.errorMessage =
           error.error?.detail || 'Registration failed. Please try again.';
+      },
+    });
+  }
+
+  onContinueAsGuest(): void {
+    this.isGuestLoading.set(true);
+    this.errorMessage = '';
+
+    this.authService.continueAsGuest().subscribe({
+      next: () => {
+        this.isGuestLoading.set(false);
+        this.router.navigateByUrl(this.returnUrl);
+      },
+      error: (error) => {
+        this.isGuestLoading.set(false);
+        this.errorMessage =
+          error.error?.detail ||
+          'Could not start guest session. Please make sure the server is running.';
       },
     });
   }
