@@ -9,19 +9,22 @@
     [attr.stroke]="lineColor()"
     [attr.stroke-width]="lineWidth()"
     [attr.stroke-opacity]="opacity()"
+    [attr.stroke-dasharray]="isNegative() ? '5 3' : null"
     class="connection-line"
   />
 
   <!-- Weight label at midpoint -->
   @if (showWeight()) {
     <svg:rect
-      [attr.x]="midX() - 18"
-      [attr.y]="midY() - 8"
-      width="36"
-      height="16"
+      [attr.x]="midX() - 20"
+      [attr.y]="midY() - 8.5"
+      width="40"
+      height="17"
       rx="4"
-      fill="#0f172a"
-      fill-opacity="0.85"
+      [attr.fill]="isNegative() ? 'var(--color-primary-100)' : 'var(--color-primary-50)'"
+      fill-opacity="0.95"
+      [attr.stroke]="isNegative() ? 'var(--color-primary-700)' : 'var(--color-primary-400)'"
+      stroke-width="1"
       class="weight-bg"
     />
     <svg:text
@@ -29,22 +32,24 @@
       [attr.y]="midY()"
       text-anchor="middle"
       dominant-baseline="central"
-      [attr.fill]="lineColor()"
+      [attr.fill]="isNegative() ? 'var(--color-primary-900)' : 'var(--color-primary-700)'"
       font-size="9"
-      font-weight="500"
+      font-weight="700"
       class="weight-label"
     >
       {{ weightText() }}
     </svg:text>
   }
 
-  <!-- Animated particle for forward pass -->
+  <!-- Animated particle for forward/backward pass -->
   @if (showParticle()) {
     <svg:circle
       [attr.cx]="particleX()"
       [attr.cy]="particleY()"
-      r="4"
+      r="4.5"
       [attr.fill]="particleColor()"
+      stroke="#ffffff"
+      stroke-width="1.5"
       class="data-particle"
     />
   }

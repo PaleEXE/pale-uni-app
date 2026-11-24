@@ -72,14 +72,14 @@ export function getActivationDerivative(type: ActivationFnType): (x: number) => 
  * Returns output vector of length weights.length
  */
 export function matVecMul(weights: number[][], input: number[]): number[] {
-  return weights.map((row) => row.reduce((sum, w, j) => sum + w * input[j], 0));
+  return weights.map((row) => row.reduce((sum, w, j) => sum + w * (input[j] ?? 0), 0));
 }
 
 /**
  * Add bias vector element-wise.
  */
 export function addBias(values: number[], biases: number[]): number[] {
-  return values.map((v, i) => v + biases[i]);
+  return values.map((v, i) => v + (biases[i] ?? 0));
 }
 
 /**
@@ -102,7 +102,7 @@ export function meanSquaredError(predicted: number[], target: number[]): number 
   const n = predicted.length;
   if (n === 0) return 0;
   const sumSq = predicted.reduce(
-    (sum, p, i) => sum + Math.pow(p - target[i], 2),
+    (sum, p, i) => sum + Math.pow(p - (target[i] ?? 0), 2),
     0
   );
   return sumSq / n;
@@ -114,7 +114,8 @@ export function meanSquaredError(predicted: number[], target: number[]): number 
  */
 export function mseDerivative(predicted: number[], target: number[]): number[] {
   const n = predicted.length;
-  return predicted.map((p, i) => (2 / n) * (p - target[i]));
+  if (n === 0) return [];
+  return predicted.map((p, i) => (2 / n) * (p - (target[i] ?? 0)));
 }
 
 // ─── Weight Initialization ──────────────────────────────────────────

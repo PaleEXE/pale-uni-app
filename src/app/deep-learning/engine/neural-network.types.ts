@@ -125,10 +125,10 @@ export type AnimationState = 'idle' | 'forward' | 'backward' | 'paused';
 /** Default network configuration */
 export const DEFAULT_NETWORK_CONFIG: NetworkConfig = {
   inputSize: 2,
-  hiddenLayers: [4, 3],
+  hiddenLayers: [4],
   outputSize: 1,
   activationFn: 'sigmoid',
-  learningRate: 0.1,
+  learningRate: 0.8,
 };
 
 /** Default XOR training data */

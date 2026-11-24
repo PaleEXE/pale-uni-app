@@ -1,8 +1,10 @@
 /**
  * Connection — SVG component for a weighted connection line between neurons.
+ * Uses only theme-consistent primary color tokens (solid bright primary for
+ * positive weights, dashed deep primary for negative weights).
  */
 
-import { Component, input, computed, signal } from '@angular/core';
+import { Component, input, computed } from '@angular/core';
 import { ConnectionState } from '../../engine/neural-network.types';
 
 @Component({
@@ -27,28 +29,31 @@ export class ConnectionComponent {
   /** Particle progress 0→1 for forward, used by parent to animate */
   readonly particleProgress = input<number>(0);
 
-  /** Line color: primary (amber) for positive weights, blue for negative */
+  /** Whether weight is negative */
+  readonly isNegative = computed(() => this.connection().weight < 0);
+
+  /** Line color: vibrant primary for positive weights, deep primary for negative */
   readonly lineColor = computed(() => {
     const w = this.connection().weight;
-    if (w > 0) {
-      const t = Math.min(w, 2) / 2;
-      return `rgb(${Math.round(245 * t + 100 * (1 - t))}, ${Math.round(158 * t + 116 * (1 - t))}, ${Math.round(11 * t + 200 * (1 - t))})`;
+    if (w >= 0) {
+      const pct = Math.round((Math.min(w, 2) / 2) * 75 + 25);
+      return `color-mix(in srgb, var(--color-primary-500) ${pct}%, var(--color-primary-300))`;
     } else {
-      const t = Math.min(Math.abs(w), 2) / 2;
-      return `rgb(${Math.round(56 * t + 100 * (1 - t))}, ${Math.round(189 * t + 116 * (1 - t))}, ${Math.round(248 * t + 200 * (1 - t))})`;
+      const pct = Math.round((Math.min(Math.abs(w), 2) / 2) * 75 + 25);
+      return `color-mix(in srgb, var(--color-primary-900) ${pct}%, var(--color-primary-700))`;
     }
   });
 
   /** Line width proportional to |weight| */
   readonly lineWidth = computed(() => {
     const w = Math.abs(this.connection().weight);
-    return Math.max(0.5, Math.min(w * 2, 5));
+    return Math.max(0.75, Math.min(w * 2, 4.5));
   });
 
   /** Opacity based on weight magnitude */
   readonly opacity = computed(() => {
     const w = Math.abs(this.connection().weight);
-    return Math.max(0.15, Math.min(w * 0.5 + 0.2, 0.9));
+    return Math.max(0.25, Math.min(w * 0.5 + 0.3, 0.95));
   });
 
   /** Midpoint for weight label */
@@ -72,9 +77,9 @@ export class ConnectionComponent {
     return this.y1() + (this.y2() - this.y1()) * t;
   });
 
-  /** Particle color matches line color */
+  /** Particle color matches weight sign within theme palette */
   readonly particleColor = computed(() => {
     const w = this.connection().weight;
-    return w >= 0 ? 'var(--color-primary-500)' : '#38bdf8';
+    return w >= 0 ? 'var(--color-primary-500)' : 'var(--color-primary-900)';
   });
 }

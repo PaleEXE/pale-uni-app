@@ -19,6 +19,11 @@ import {
   DEFAULT_TRAINING_DATA,
 } from './neural-network.types';
 import {
+  DEFAULT_PRESET_ID,
+  NetworkPreset,
+  getPresetById,
+} from './network-presets';
+import {
   getActivationFn,
   getActivationDerivative,
   matVecMul,
@@ -31,10 +36,18 @@ import {
   gradientDescentUpdate,
 } from './math.utils';
 
+const MAX_LOSS_HISTORY = 600;
+
 @Injectable()
 export class NeuralNetworkService {
   // ─── Configuration ───────────────────────────────────────────────
-  readonly config = signal<NetworkConfig>({ ...DEFAULT_NETWORK_CONFIG });
+  readonly config = signal<NetworkConfig>({
+    ...DEFAULT_NETWORK_CONFIG,
+    hiddenLayers: [...DEFAULT_NETWORK_CONFIG.hiddenLayers],
+  });
+
+  // ─── Active Preset ───────────────────────────────────────────────
+  readonly activePresetId = signal<string>(DEFAULT_PRESET_ID);
 
   // ─── Network State ───────────────────────────────────────────────
   readonly network = signal<NetworkState>({
@@ -44,7 +57,12 @@ export class NeuralNetworkService {
   });
 
   // ─── Training Data (user-editable) ──────────────────────────────
-  readonly trainingData = signal<TrainingSample[]>([...DEFAULT_TRAINING_DATA]);
+  readonly trainingData = signal<TrainingSample[]>(
+    DEFAULT_TRAINING_DATA.map((s) => ({
+      inputs: [...s.inputs],
+      targets: [...s.targets],
+    }))
+  );
 
   // ─── Training State ──────────────────────────────────────────────
   readonly training = signal<TrainingState>({
@@ -75,15 +93,44 @@ export class NeuralNetworkService {
   sampleIndex = 0;
 
   constructor() {
-    this.buildNetwork(this.config());
+    const defaultPreset = getPresetById(DEFAULT_PRESET_ID);
+    if (defaultPreset) {
+      this.loadPreset(defaultPreset);
+    } else {
+      this.buildNetwork(this.config());
+    }
+  }
+
+  // ─── Preset Loading ──────────────────────────────────────────────
+
+  /** Load a prebuilt neural network preset (architecture + dataset). */
+  loadPreset(preset: NetworkPreset): void {
+    this.activePresetId.set(preset.id);
+    const clonedData: TrainingSample[] = preset.trainingData.map((s) => ({
+      inputs: [...s.inputs],
+      targets: [...s.targets],
+    }));
+    this.trainingData.set(clonedData);
+    this.buildNetwork({
+      ...preset.config,
+      hiddenLayers: [...preset.config.hiddenLayers],
+    });
   }
 
   // ─── Network Construction ────────────────────────────────────────
 
   /** Build network from configuration. Initializes weights + biases. */
   buildNetwork(config: NetworkConfig): void {
-    this.config.set({ ...config });
-    const sizes = [config.inputSize, ...config.hiddenLayers, config.outputSize];
+    const normalizedConfig: NetworkConfig = {
+      ...config,
+      hiddenLayers: [...config.hiddenLayers],
+    };
+    this.config.set(normalizedConfig);
+    const sizes = [
+      normalizedConfig.inputSize,
+      ...normalizedConfig.hiddenLayers,
+      normalizedConfig.outputSize,
+    ];
     const layers: LayerState[] = [];
     const connections: ConnectionState[] = [];
 
@@ -126,7 +173,11 @@ export class NeuralNetworkService {
       }
     }
 
-    this.network.set({ layers, connections, activationFn: config.activationFn });
+    this.network.set({
+      layers,
+      connections,
+      activationFn: normalizedConfig.activationFn,
+    });
 
     // Reset training state
     this.training.set({
@@ -134,19 +185,65 @@ export class NeuralNetworkService {
       currentLoss: 0,
       lossHistory: [],
       isTraining: false,
-      currentInputs: new Array(config.inputSize).fill(0),
-      currentTargets: new Array(config.outputSize).fill(0),
-      currentOutputs: new Array(config.outputSize).fill(0),
+      currentInputs: new Array(normalizedConfig.inputSize).fill(0),
+      currentTargets: new Array(normalizedConfig.outputSize).fill(0),
+      currentOutputs: new Array(normalizedConfig.outputSize).fill(0),
     });
     this.forwardSteps.set([]);
     this.backpropSteps.set([]);
     this.sampleIndex = 0;
 
     // Adjust training data to match new input/output sizes
-    this.adjustTrainingData(config.inputSize, config.outputSize);
+    this.adjustTrainingData(
+      normalizedConfig.inputSize,
+      normalizedConfig.outputSize
+    );
   }
 
   // ─── Forward Propagation ─────────────────────────────────────────
+
+  /**
+   * Pure non-mutating forward evaluation used for dataset MSE calculation.
+   */
+  evaluateForward(net: NetworkState, inputs: number[]): number[] {
+    const activationFn = getActivationFn(net.activationFn);
+    let currentActivations = net.layers[0].neurons.map((_, i) => inputs[i] ?? 0);
+
+    for (let li = 1; li < net.layers.length; li++) {
+      const prevLayer = net.layers[li - 1];
+      const currLayer = net.layers[li];
+
+      const weights: number[][] = currLayer.neurons.map((toN) =>
+        prevLayer.neurons.map((fromN) => {
+          const conn = net.connections.find(
+            (c) => c.fromNeuronId === fromN.id && c.toNeuronId === toN.id
+          );
+          return conn ? conn.weight : 0;
+        })
+      );
+      const biases = currLayer.neurons.map((n) => n.bias);
+      const z = addBias(matVecMul(weights, currentActivations), biases);
+      currentActivations = applyActivation(z, activationFn);
+    }
+
+    return currentActivations;
+  }
+
+  /**
+   * Compute mean squared error across the entire training dataset without
+   * mutating the currently displayed neuron activations.
+   */
+  evaluateDatasetLoss(net: NetworkState = this.network()): number {
+    const data = this.trainingData();
+    if (data.length === 0 || net.layers.length === 0) return 0;
+
+    let totalLoss = 0;
+    for (const sample of data) {
+      const outputs = this.evaluateForward(net, sample.inputs);
+      totalLoss += meanSquaredError(outputs, sample.targets);
+    }
+    return totalLoss / data.length;
+  }
 
   /**
    * Runs a complete forward pass through the network.
@@ -214,7 +311,7 @@ export class NeuralNetworkService {
 
     this.training.update((t) => ({
       ...t,
-      currentInputs: [...inputs],
+      currentInputs: net.layers[0].neurons.map((n) => n.activation),
       currentOutputs: [...outputActivations],
     }));
 
@@ -226,6 +323,7 @@ export class NeuralNetworkService {
   /**
    * Runs backpropagation: computes gradients and updates weights.
    * Must be called after forwardPass().
+   * Returns the updated full-dataset MSE loss.
    */
   backpropagate(targets: number[]): number {
     const net = this.deepCloneNetwork(this.network());
@@ -235,8 +333,8 @@ export class NeuralNetworkService {
 
     const outputLayer = net.layers[net.layers.length - 1];
     const predictions = outputLayer.neurons.map((n) => n.activation);
-    const loss = meanSquaredError(predictions, targets);
-    const dLoss = mseDerivative(predictions, targets);
+    const normalizedTargets = outputLayer.neurons.map((_, i) => targets[i] ?? 0);
+    const dLoss = mseDerivative(predictions, normalizedTargets);
 
     // ── Output layer deltas ──
     for (let ni = 0; ni < outputLayer.neurons.length; ni++) {
@@ -317,14 +415,28 @@ export class NeuralNetworkService {
     this.network.set(net);
     this.backpropSteps.set(steps);
 
-    this.training.update((t) => ({
-      ...t,
-      currentLoss: loss,
-      currentTargets: [...targets],
-      lossHistory: [...t.lossHistory, loss],
-    }));
+    // Compute true dataset MSE after the weight update
+    const datasetLoss =
+      this.trainingData().length > 0
+        ? this.evaluateDatasetLoss(net)
+        : meanSquaredError(predictions, normalizedTargets);
 
-    return loss;
+    this.training.update((t) => {
+      const nextHistory = [...t.lossHistory, datasetLoss];
+      const trimmedHistory =
+        nextHistory.length > MAX_LOSS_HISTORY
+          ? nextHistory.slice(nextHistory.length - MAX_LOSS_HISTORY)
+          : nextHistory;
+
+      return {
+        ...t,
+        currentLoss: datasetLoss,
+        currentTargets: [...normalizedTargets],
+        lossHistory: trimmedHistory,
+      };
+    });
+
+    return datasetLoss;
   }
 
   // ─── Training Step ───────────────────────────────────────────────
@@ -359,24 +471,38 @@ export class NeuralNetworkService {
   }
 
   /**
-   * Run multiple training steps rapidly (for auto-training).
+   * Run multiple training steps rapidly (for auto-training or batch evaluation).
    */
   trainEpoch(stepsPerEpoch?: number): number {
     const data = this.trainingData();
+    if (data.length === 0) return 0;
     const steps = stepsPerEpoch ?? data.length;
-    let totalLoss = 0;
+    let lastLoss = 0;
     for (let i = 0; i < steps; i++) {
       const { loss } = this.trainStep();
-      totalLoss += loss;
+      lastLoss = loss;
     }
-    return totalLoss / steps;
+    return lastLoss;
+  }
+
+  /** Set whether auto-training is currently active */
+  setTrainingStatus(isTraining: boolean): void {
+    this.training.update((t) => ({
+      ...t,
+      isTraining,
+    }));
   }
 
   // ─── Training Data Management ────────────────────────────────────
 
   /** Set training data from user input */
   setTrainingData(data: TrainingSample[]): void {
-    this.trainingData.set(data);
+    const cfg = this.config();
+    const normalized = data.map((s) => ({
+      inputs: Array.from({ length: cfg.inputSize }, (_, i) => s.inputs[i] ?? 0),
+      targets: Array.from({ length: cfg.outputSize }, (_, i) => s.targets[i] ?? 0),
+    }));
+    this.trainingData.set(normalized);
     this.sampleIndex = 0;
   }
 

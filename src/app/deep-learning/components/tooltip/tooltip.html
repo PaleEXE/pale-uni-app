@@ -4,16 +4,28 @@
     [style.left.px]="posX()"
     [style.top.px]="posY()"
   >
-    <div class="tooltip-content">
-      <div class="tooltip-title">{{ title() }}</div>
-      @for (item of items(); track item.label) {
-        <div class="tooltip-row">
-          <span class="tooltip-label">{{ item.label }}:</span>
-          <span class="tooltip-value">{{ item.value }}</span>
-        </div>
-      }
+    <div
+      class="bg-white/95 backdrop-blur-sm border-2 border-primary-400 rounded-lg px-3.5 py-2.5 min-w-[165px] shadow-lg"
+    >
+      <div
+        class="text-xs font-bold text-primary-800 uppercase tracking-wider pb-1.5 mb-1.5 border-b border-primary-200"
+      >
+        {{ title() }}
+      </div>
+      <div class="flex flex-col gap-1">
+        @for (item of items(); track item.label) {
+          <div class="flex justify-between items-center gap-3">
+            <span class="text-[11px] text-primary-600">{{ item.label }}:</span>
+            <span class="text-[11px] font-bold text-primary-900">{{ item.value }}</span>
+          </div>
+        }
+      </div>
       @if (formula()) {
-        <div class="tooltip-formula">{{ formula() }}</div>
+        <div
+          class="mt-2 px-2 py-1 rounded bg-primary-50 border border-primary-200 text-[10px] font-semibold text-primary-700"
+        >
+          {{ formula() }}
+        </div>
       }
     </div>
   </div>

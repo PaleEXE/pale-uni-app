@@ -2,7 +2,14 @@
  * ControlPanel — Sidebar with all interactive controls for the neural network.
  */
 
-import { Component, input, output, computed, signal } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  computed,
+  signal,
+  effect,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   NetworkConfig,
@@ -28,6 +35,8 @@ export class ControlPanelComponent {
   readonly trainingData = input.required<TrainingSample[]>();
   /** Display mode */
   readonly displayMode = input<DisplayMode>('beginner');
+  /** Default inference input vector (updated when preset changes) */
+  readonly defaultInferenceInput = input<number[]>([0, 0]);
 
   // Outputs
   readonly forwardPass = output<void>();
@@ -44,10 +53,10 @@ export class ControlPanelComponent {
   readonly updateTrainingData = output<TrainingSample[]>();
   readonly runInference = output<number[]>();
 
-  readonly isAutoTraining = signal(false);
   readonly animationSpeed = signal(5);
   readonly inferenceInputs = signal<number[]>([0, 0]);
 
+  readonly isAutoTraining = computed(() => this.trainingState().isTraining);
   readonly hiddenLayerCount = computed(() => this.config().hiddenLayers.length);
   readonly hiddenLayerSizes = computed(() => this.config().hiddenLayers);
   readonly learningRate = computed(() => this.config().learningRate);
@@ -58,6 +67,18 @@ export class ControlPanelComponent {
   readonly currentOutputs = computed(() => this.trainingState().currentOutputs);
   readonly currentTargets = computed(() => this.trainingState().currentTargets);
 
+  constructor() {
+    effect(() => {
+      const defaults = this.defaultInferenceInput();
+      const inputSize = this.config().inputSize;
+      const synced = Array.from(
+        { length: inputSize },
+        (_, i) => defaults[i] ?? 0
+      );
+      this.inferenceInputs.set(synced);
+    });
+  }
+
   onForwardPass(): void {
     this.forwardPass.emit();
   }
@@ -67,12 +88,10 @@ export class ControlPanelComponent {
   }
 
   onAutoTrain(): void {
-    this.isAutoTraining.update((v) => !v);
     this.autoTrain.emit();
   }
 
   onReset(): void {
-    this.isAutoTraining.set(false);
     this.reset.emit();
   }
 
@@ -113,7 +132,10 @@ export class ControlPanelComponent {
   // ─── Training Data Edit Handlers ───
   onSampleChange(index: number, type: 'inputs' | 'targets', event: Event): void {
     const val = (event.target as HTMLInputElement).value;
-    const parsed = val.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+    const parsed = val
+      .split(',')
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n));
     const newData = [...this.trainingData()];
     if (type === 'inputs') {
       newData[index] = { ...newData[index], inputs: parsed };
@@ -130,18 +152,29 @@ export class ControlPanelComponent {
 
   onAddSample(): void {
     const cfg = this.config();
-    const newData = [...this.trainingData(), {
-      inputs: new Array(cfg.inputSize).fill(0),
-      targets: new Array(cfg.outputSize).fill(0)
-    }];
+    const newData = [
+      ...this.trainingData(),
+      {
+        inputs: new Array(cfg.inputSize).fill(0),
+        targets: new Array(cfg.outputSize).fill(0),
+      },
+    ];
     this.updateTrainingData.emit(newData);
   }
 
   // ─── Live Inference ───
   onInferenceChange(event: Event): void {
     const val = (event.target as HTMLInputElement).value;
-    const parsed = val.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-    this.inferenceInputs.set(parsed);
+    const parsed = val
+      .split(',')
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n));
+    const inputSize = this.config().inputSize;
+    const normalized = Array.from(
+      { length: inputSize },
+      (_, i) => parsed[i] ?? 0
+    );
+    this.inferenceInputs.set(normalized);
   }
 
   onRunInference(): void {

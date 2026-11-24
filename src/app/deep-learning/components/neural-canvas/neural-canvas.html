@@ -1,16 +1,25 @@
-<div class="neural-canvas-container" #canvasContainer>
+<div
+  class="relative w-full h-full min-h-[420px] overflow-hidden rounded-lg bg-primary-50 border-2 border-primary-500 shadow select-none"
+  #canvasContainer
+>
   <!-- SVG Network Visualization -->
   <svg
     [attr.width]="canvasWidth()"
     [attr.height]="canvasHeight()"
-    class="neural-svg"
+    class="block w-full h-full"
     (mousemove)="onMouseMove($event)"
     (mouseleave)="onMouseLeave()"
   >
     <!-- Background grid -->
     <svg:defs>
       <svg:pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-        <svg:path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.06)" stroke-width="1" />
+        <svg:path
+          d="M 40 0 L 0 0 0 40"
+          fill="none"
+          stroke="var(--color-primary-200)"
+          stroke-opacity="0.7"
+          stroke-width="1"
+        />
       </svg:pattern>
     </svg:defs>
     <svg:rect width="100%" height="100%" fill="url(#grid)" />
@@ -21,11 +30,11 @@
         [attr.x]="label.x"
         y="28"
         text-anchor="middle"
-        fill="#64748b"
+        fill="var(--color-primary-700)"
         font-size="11"
-        font-weight="600"
-        letter-spacing="0.05em"
-        class="layer-label"
+        font-weight="700"
+        letter-spacing="0.06em"
+        class="uppercase select-none"
       >
         {{ label.text }}
       </svg:text>
@@ -63,6 +72,35 @@
       />
     }
   </svg>
+
+  <!-- Canvas Legend (bottom-left) -->
+  <div
+    class="absolute bottom-2.5 left-2.5 flex items-center gap-3 px-2.5 py-1 bg-white/85 border border-primary-300 text-primary-800 text-[10px] font-semibold rounded shadow-sm pointer-events-none"
+  >
+    <span class="inline-flex items-center gap-1.5">
+      <span class="inline-block w-4 h-0.5 bg-primary-500 rounded"></span>
+      <span>Weight +</span>
+    </span>
+    <span class="inline-flex items-center gap-1.5">
+      <span class="inline-block w-4 border-t-2 border-dashed border-primary-900"></span>
+      <span>Weight −</span>
+    </span>
+  </div>
+
+  <!-- Keyboard Shortcuts Hint (bottom-right) -->
+  <div
+    class="hidden sm:flex absolute bottom-2.5 right-2.5 items-center gap-2 px-2.5 py-1 bg-white/85 border border-primary-300 text-primary-700 text-[10px] font-medium rounded shadow-sm pointer-events-none"
+  >
+    <span><strong class="text-primary-900">Space</strong> Train</span>
+    <span class="text-primary-300">|</span>
+    <span><strong class="text-primary-900">F</strong> Forward</span>
+    <span class="text-primary-300">|</span>
+    <span><strong class="text-primary-900">A</strong> Auto</span>
+    <span class="text-primary-300">|</span>
+    <span><strong class="text-primary-900">R</strong> Reset</span>
+    <span class="text-primary-300">|</span>
+    <span><strong class="text-primary-900">M</strong> Mode</span>
+  </div>
 
   <!-- Tooltip overlay -->
   <app-tooltip

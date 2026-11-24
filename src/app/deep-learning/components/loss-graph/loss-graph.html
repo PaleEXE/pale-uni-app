@@ -1,11 +1,21 @@
-<div class="loss-graph-container" #graphContainer>
-  <div class="graph-header">
-    <h3 class="graph-title">Loss Over Time</h3>
+<div
+  class="bg-primary-50 border-2 border-primary-300 rounded-lg shadow p-4 overflow-hidden"
+  #graphContainer
+>
+  <div class="flex justify-between items-center mb-3">
+    <h3 class="text-sm font-bold text-primary-700 uppercase tracking-wider">
+      Loss Over Time
+    </h3>
     @if (currentLoss() > 0) {
-      <span class="current-loss">MSE: {{ currentLoss().toFixed(6) }}</span>
+      <span
+        class="px-2.5 py-0.5 bg-white/80 border border-primary-300 rounded text-xs font-bold text-primary-800 shadow-sm"
+      >
+        MSE: {{ currentLoss().toFixed(6) }}
+      </span>
     }
   </div>
-  <svg #graphSvg [attr.width]="graphWidth()" [attr.height]="graphHeight()" class="loss-svg">
+
+  <svg #graphSvg [attr.width]="graphWidth()" [attr.height]="graphHeight()" class="block w-full">
     <!-- Grid lines -->
     @for (tick of yTicks(); track tick) {
       <svg:line
@@ -13,7 +23,7 @@
         [attr.y1]="scaleY(tick)"
         [attr.x2]="graphWidth() - marginRight"
         [attr.y2]="scaleY(tick)"
-        stroke="rgba(148,163,184,0.08)"
+        stroke="var(--color-primary-200)"
         stroke-width="1"
       />
       <svg:text
@@ -21,9 +31,10 @@
         [attr.y]="scaleY(tick)"
         text-anchor="end"
         dominant-baseline="middle"
-        fill="#64748b"
-        font-size="9"
-        class="axis-label"
+        fill="var(--color-primary-600)"
+        font-size="10"
+        font-weight="600"
+        class="select-none"
       >
         {{ formatTick(tick) }}
       </svg:text>
@@ -35,31 +46,48 @@
         [attr.x]="scaleX(tick)"
         [attr.y]="graphHeight() - marginBottom + 14"
         text-anchor="middle"
-        fill="#64748b"
-        font-size="9"
-        class="axis-label"
+        fill="var(--color-primary-600)"
+        font-size="10"
+        font-weight="600"
+        class="select-none"
       >
         {{ tick }}
       </svg:text>
     }
 
+    <!-- Empty state helper -->
+    @if (lossHistory().length === 0) {
+      <svg:text
+        [attr.x]="(graphWidth() + marginLeft - marginRight) / 2"
+        [attr.y]="(graphHeight() - marginBottom + marginTop) / 2"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        fill="var(--color-primary-500)"
+        font-size="11"
+        font-weight="600"
+        class="select-none"
+      >
+        Run a train step to plot MSE loss
+      </svg:text>
+    }
+
     <!-- Loss line -->
     @if (pathData()) {
-      <svg:path
-        [attr.d]="pathData()"
-        fill="none"
-        stroke="url(#lossGradient)"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="loss-line"
-      />
-
       <!-- Gradient fill under the line -->
       <svg:path
         [attr.d]="areaData()"
         fill="url(#areaGradient)"
         class="loss-area"
+      />
+
+      <svg:path
+        [attr.d]="pathData()"
+        fill="none"
+        stroke="url(#lossGradient)"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="loss-line"
       />
     }
 
@@ -69,7 +97,9 @@
         [attr.cx]="scaleX(lossHistory().length - 1)"
         [attr.cy]="scaleY(lossHistory()[lossHistory().length - 1])"
         r="4"
-        fill="var(--color-primary-500)"
+        fill="var(--color-primary-600)"
+        stroke="#ffffff"
+        stroke-width="2"
         class="current-dot"
       />
     }
@@ -77,12 +107,12 @@
     <!-- Gradient definitions -->
     <svg:defs>
       <svg:linearGradient id="lossGradient" x1="0" y1="0" x2="1" y2="0">
-        <svg:stop offset="0%" stop-color="#f59e0b" />
-        <svg:stop offset="100%" stop-color="#ef4444" />
+        <svg:stop offset="0%" stop-color="var(--color-primary-500)" />
+        <svg:stop offset="100%" stop-color="var(--color-primary-700)" />
       </svg:linearGradient>
       <svg:linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-        <svg:stop offset="0%" stop-color="rgba(245,158,11,0.2)" />
-        <svg:stop offset="100%" stop-color="rgba(245,158,11,0)" />
+        <svg:stop offset="0%" stop-color="var(--color-primary-400)" stop-opacity="0.35" />
+        <svg:stop offset="100%" stop-color="var(--color-primary-400)" stop-opacity="0.02" />
       </svg:linearGradient>
     </svg:defs>
   </svg>

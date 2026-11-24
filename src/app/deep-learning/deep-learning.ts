@@ -1,6 +1,6 @@
 /**
  * DeepLearning — Main page component that orchestrates the neural network visualizer.
- * Manages animation state, connects components, handles keyboard shortcuts.
+ * Manages animation state, connects components, handles presets and keyboard shortcuts.
  */
 
 import {
@@ -18,11 +18,15 @@ import { ControlPanelComponent } from './components/control-panel/control-panel'
 import { LossGraphComponent } from './components/loss-graph/loss-graph';
 import { NeuralNetworkService } from './engine/neural-network.service';
 import {
+  NETWORK_PRESETS,
+  NetworkPreset,
+  getPresetById,
+} from './engine/network-presets';
+import {
   DisplayMode,
   AnimationState,
   ActivationFnType,
   NeuronState,
-  ConnectionState,
   TrainingSample,
 } from './engine/neural-network.types';
 
@@ -37,11 +41,33 @@ import {
 export class DeepLearningComponent implements OnDestroy {
   readonly nnService: NeuralNetworkService;
 
+  readonly logicGatePresets: NetworkPreset[] = NETWORK_PRESETS.filter(
+    (p) => p.category === 'Logic Gates'
+  );
+  readonly introPresets: NetworkPreset[] = NETWORK_PRESETS.filter(
+    (p) => p.category === 'Introductory Examples'
+  );
+
   readonly displayMode = signal<DisplayMode>('beginner');
   readonly animationState = signal<AnimationState>('idle');
   readonly animatingLayer = signal(-1);
   readonly particleProgress = signal(0);
   readonly selectedNeuron = signal<NeuronState | null>(null);
+
+  readonly activePreset = computed(() =>
+    getPresetById(this.nnService.activePresetId())
+  );
+
+  readonly activePresetArchitecture = computed(() => {
+    const sizes = this.nnService.layerSizes();
+    return sizes.join(' -> ');
+  });
+
+  readonly defaultInferenceInput = computed(() => {
+    const preset = this.activePreset();
+    if (preset) return preset.defaultInferenceInput;
+    return new Array(this.nnService.config().inputSize).fill(0);
+  });
 
   // Incoming connections for the selected neuron
   readonly selectedNeuronConnections = computed(() => {
@@ -65,13 +91,26 @@ export class DeepLearningComponent implements OnDestroy {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
+  // ─── Preset Selection ───────────────────────────────────────────
+
+  onPresetChange(event: Event): void {
+    const presetId = (event.target as HTMLSelectElement).value;
+    const preset = getPresetById(presetId);
+    if (!preset) return;
+
+    this.stopAutoTrain();
+    this.cancelAnimation();
+    this.selectedNeuron.set(null);
+    this.nnService.loadPreset(preset);
+  }
+
   // ─── Forward Pass with Animation ────────────────────────────────
 
   onForwardPass(): void {
     if (!this.isBrowser) return;
     const data = this.nnService.trainingData();
     if (data.length === 0) return;
-    
+
     const sample = data[this.nnService.sampleIndex % data.length];
     this.nnService.forwardPass(sample.inputs);
     this.nnService.training.update((t) => ({
@@ -85,6 +124,7 @@ export class DeepLearningComponent implements OnDestroy {
     const steps = this.nnService.forwardSteps();
     if (steps.length === 0) return;
 
+    this.cancelAnimation();
     this.animationState.set('forward');
     let currentStep = 0;
     const totalSteps = steps.length;
@@ -132,6 +172,7 @@ export class DeepLearningComponent implements OnDestroy {
     const steps = this.nnService.backpropSteps();
     if (steps.length === 0) return;
 
+    this.cancelAnimation();
     this.animationState.set('backward');
     let currentStep = 0;
     const totalSteps = steps.length;
@@ -179,9 +220,13 @@ export class DeepLearningComponent implements OnDestroy {
   }
 
   private startAutoTrain(): void {
-    const interval = Math.max(50, 500 / this.animationSpeed);
+    const interval = Math.max(40, 400 / this.animationSpeed);
+    const stepsPerTick = Math.max(1, Math.round(this.animationSpeed / 8));
+    this.nnService.setTrainingStatus(true);
     this.autoTrainInterval = setInterval(() => {
-      this.nnService.trainStep();
+      for (let i = 0; i < stepsPerTick; i++) {
+        this.nnService.trainStep();
+      }
     }, interval);
   }
 
@@ -190,6 +235,7 @@ export class DeepLearningComponent implements OnDestroy {
       clearInterval(this.autoTrainInterval);
       this.autoTrainInterval = null;
     }
+    this.nnService.setTrainingStatus(false);
   }
 
   // ─── Configuration Handlers ─────────────────────────────────────
@@ -197,6 +243,7 @@ export class DeepLearningComponent implements OnDestroy {
   onReset(): void {
     this.stopAutoTrain();
     this.cancelAnimation();
+    this.selectedNeuron.set(null);
     this.nnService.resetTraining();
   }
 
@@ -219,24 +266,28 @@ export class DeepLearningComponent implements OnDestroy {
 
   onActivationFnChange(fn: ActivationFnType): void {
     this.stopAutoTrain();
+    this.cancelAnimation();
     this.nnService.setActivationFunction(fn);
-    this.selectedNeuron.set(null); // Reset view
+    this.selectedNeuron.set(null);
   }
 
   onAddLayer(): void {
     this.stopAutoTrain();
+    this.cancelAnimation();
     this.nnService.addHiddenLayer();
-    this.selectedNeuron.set(null); // Reset view
+    this.selectedNeuron.set(null);
   }
 
   onRemoveLayer(): void {
     this.stopAutoTrain();
+    this.cancelAnimation();
     this.nnService.removeHiddenLayer();
-    this.selectedNeuron.set(null); // Reset view
+    this.selectedNeuron.set(null);
   }
 
   onLayerSizeChange(event: { index: number; delta: number }): void {
     this.stopAutoTrain();
+    this.cancelAnimation();
     const cfg = this.nnService.config();
     const newLayers = [...cfg.hiddenLayers];
     newLayers[event.index] = Math.max(
@@ -244,12 +295,11 @@ export class DeepLearningComponent implements OnDestroy {
       Math.min(8, newLayers[event.index] + event.delta)
     );
     this.nnService.setHiddenLayers(newLayers);
-    this.selectedNeuron.set(null); // Reset view
+    this.selectedNeuron.set(null);
   }
 
   onSpeedChange(speed: number): void {
     this.animationSpeed = speed;
-    // Restart auto-train with new speed if running
     if (this.autoTrainInterval) {
       this.stopAutoTrain();
       this.startAutoTrain();
@@ -291,7 +341,10 @@ export class DeepLearningComponent implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
+    if (
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLSelectElement
+    ) {
       return;
     }
 

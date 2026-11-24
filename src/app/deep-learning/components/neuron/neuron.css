@@ -1,25 +1,19 @@
 .neuron-circle {
   cursor: pointer;
-  transition: filter 0.3s ease;
+  transition: filter 0.25s ease;
 }
 
 .neuron-ring {
-  transition: stroke-width 0.3s ease, stroke 0.3s ease;
+  transition: stroke-width 0.25s ease, stroke 0.25s ease;
   pointer-events: none;
 }
 
-.neuron-value {
-  pointer-events: none;
-  font-family: 'JetBrains Mono', monospace;
-  user-select: none;
-}
-
+.neuron-value,
 .neuron-label {
   pointer-events: none;
-  font-family: 'JetBrains Mono', monospace;
   user-select: none;
 }
 
 .neuron-group:hover .neuron-circle {
-  filter: brightness(1.2);
+  filter: brightness(0.95);
 }

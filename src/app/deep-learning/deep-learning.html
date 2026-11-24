@@ -1,42 +1,107 @@
-<div class="deep-learning-page">
+<div class="max-w-7xl mx-auto px-4 pb-8 flex flex-col gap-6">
   <!-- Page Header -->
-  <div class="page-header">
-    <div class="header-content">
-      <h1 class="page-title">
-        <span class="title-icon">🧠</span>
-        Deep Learning Under The Hood
-      </h1>
-      <p class="page-subtitle">
-        @if (displayMode() === 'beginner') {
-          Watch how a neural network learns step by step
-        } @else {
-          Interactive neural network with forward/backpropagation visualization
-        }
-      </p>
-    </div>
+  <div class="flex flex-col items-center justify-center text-center mt-4 mb-1">
+    <h1 class="text-3xl font-bold text-primary-700">
+      Deep Learning Under The Hood
+    </h1>
+    <p class="text-sm text-primary-700/80 mt-1">
+      @if (displayMode() === 'beginner') {
+        Watch how a neural network learns step by step
+      } @else {
+        Interactive neural network with forward &amp; backpropagation visualization
+      }
+    </p>
   </div>
 
-  <!-- Main Layout -->
-  <div class="main-layout">
-    <!-- Network Visualization -->
-    <div class="canvas-area">
-      <app-neural-canvas
-        [network]="nnService.network()"
-        [displayMode]="displayMode()"
-        [animationState]="animationState()"
-        [animatingLayer]="animatingLayer()"
-        [animParticleProgress]="particleProgress()"
-        (neuronDrag)="onNeuronDrag($event)"
-      />
+  <!-- Main Workspace -->
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
+    <!-- Left Column: Network Visualization + Loss Graph + Prebuilt Networks -->
+    <div class="flex flex-col gap-4 min-w-0">
+      <div class="h-[460px] lg:h-[520px]">
+        <app-neural-canvas
+          [network]="nnService.network()"
+          [displayMode]="displayMode()"
+          [animationState]="animationState()"
+          [animatingLayer]="animatingLayer()"
+          [animParticleProgress]="particleProgress()"
+          (neuronDrag)="onNeuronDrag($event)"
+        />
+      </div>
+
+      <div>
+        <app-loss-graph
+          [lossHistory]="nnService.training().lossHistory"
+          [currentLoss]="nnService.training().currentLoss"
+        />
+      </div>
+
+      <!-- Prebuilt Neural Networks Selector (directly below Loss Over Time) -->
+      <div class="bg-primary-50 border-2 border-primary-300 rounded-lg shadow p-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex flex-col gap-0.5">
+            <label
+              for="presetSelect"
+              class="text-sm font-bold text-primary-700 uppercase tracking-wider"
+            >
+              Prebuilt Neural Networks
+            </label>
+            @if (activePreset(); as preset) {
+              <p class="text-xs text-primary-700/80">
+                {{ preset.description }}
+              </p>
+            }
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <select
+              id="presetSelect"
+              class="px-3 py-2 bg-primary-500 text-white rounded-md cursor-pointer text-xs font-bold hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-700"
+              [value]="nnService.activePresetId()"
+              (change)="onPresetChange($event)"
+            >
+              <optgroup label="Logic Gates">
+                @for (preset of logicGatePresets; track preset.id) {
+                  <option [value]="preset.id">{{ preset.name }}</option>
+                }
+              </optgroup>
+              <optgroup label="Introductory Examples">
+                @for (preset of introPresets; track preset.id) {
+                  <option [value]="preset.id">{{ preset.name }}</option>
+                }
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2.5 border-t border-primary-200 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-primary-700">
+          <span>
+            Architecture:
+            <strong class="text-primary-900">{{ activePresetArchitecture() }}</strong>
+          </span>
+          <span>
+            Samples:
+            <strong class="text-primary-900">{{ nnService.trainingData().length }}</strong>
+          </span>
+          <span>
+            Learning Rate:
+            <strong class="text-primary-900">{{ nnService.config().learningRate }}</strong>
+          </span>
+          <span>
+            Activation:
+            <strong class="text-primary-900 uppercase">{{ nnService.config().activationFn }}</strong>
+          </span>
+        </div>
+      </div>
     </div>
 
-    <!-- Control Panel Sidebar -->
-    <div class="sidebar">
+    <!-- Right Column: Control Panel Sidebar -->
+    <div class="w-full lg:w-[320px] shrink-0">
       <app-control-panel
         [config]="nnService.config()"
         [trainingState]="nnService.training()"
         [trainingData]="nnService.trainingData()"
         [displayMode]="displayMode()"
+        [defaultInferenceInput]="defaultInferenceInput()"
         (forwardPass)="onForwardPass()"
         (trainStep)="onTrainStep()"
         (autoTrain)="onAutoTrain()"
@@ -54,39 +119,62 @@
     </div>
   </div>
 
-  <!-- Loss Graph -->
-  <div class="graph-area">
-    <app-loss-graph
-      [lossHistory]="nnService.training().lossHistory"
-      [currentLoss]="nnService.training().currentLoss"
-    />
-  </div>
-
-  <!-- Node Editor Popover -->
+  <!-- Node Editor Modal -->
   @if (selectedNeuron(); as neuron) {
-    <div class="node-editor-overlay" (click)="onCloseNodeEditor()"></div>
-    <div class="node-editor-panel">
-      <div class="node-editor-header">
-        <h3 class="editor-title">Edit Neuron</h3>
-        <button class="close-btn" (click)="onCloseNodeEditor()">✕</button>
-      </div>
-      <div class="node-editor-content">
-        <div class="editor-row">
-          <label class="editor-label">Bias (b)</label>
-          <input type="number" step="0.1" [value]="neuron.bias" (change)="onBiasChange($event)" class="text-box w-full mt-1 p-2 bg-slate-800 text-white border-slate-600 focus:border-primary-500" />
+    <div
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+      (click)="onCloseNodeEditor()"
+    >
+      <div
+        class="bg-white p-6 rounded-lg shadow-lg border-2 border-primary-500 w-80 max-w-[90vw] max-h-[80vh] overflow-y-auto"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="flex justify-between items-center pb-3 mb-4 border-b border-primary-200">
+          <h3 class="text-lg font-bold text-primary-700">Edit Neuron</h3>
+          <button
+            class="text-primary-500 hover:text-primary-800 text-lg leading-none p-1 cursor-pointer transition font-bold"
+            (click)="onCloseNodeEditor()"
+          >
+            &times;
+          </button>
         </div>
-        
-        @if (selectedNeuronConnections().length > 0) {
-          <h4 class="editor-subtitle mt-4 mb-2">Incoming Weights</h4>
-          <div class="weights-list">
-            @for (conn of selectedNeuronConnections(); track conn.id) {
-              <div class="editor-row pb-2">
-                <label class="editor-label">From {{ conn.fromNeuronId }}</label>
-                <input type="number" step="0.1" [value]="conn.weight" (change)="onWeightChange(conn.id, $event)" class="text-box w-full mt-1 p-2 bg-slate-800 text-white border-slate-600 focus:border-primary-500" />
-              </div>
-            }
+
+        <div class="flex flex-col gap-3">
+          <div class="flex flex-col">
+            <label class="text-xs font-semibold uppercase tracking-wider text-primary-700">
+              Bias (b)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              [value]="neuron.bias"
+              (change)="onBiasChange($event)"
+              class="text-box w-full mt-1 px-3 py-2 bg-primary-50 text-primary-900 text-sm font-medium"
+            />
           </div>
-        }
+
+          @if (selectedNeuronConnections().length > 0) {
+            <h4 class="text-xs font-bold uppercase tracking-wider text-primary-700 mt-2 pt-3 border-t border-primary-200">
+              Incoming Weights
+            </h4>
+            <div class="flex flex-col gap-3">
+              @for (conn of selectedNeuronConnections(); track conn.id) {
+                <div class="flex flex-col">
+                  <label class="text-xs font-medium text-primary-600">
+                    From {{ conn.fromNeuronId }}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    [value]="conn.weight"
+                    (change)="onWeightChange(conn.id, $event)"
+                    class="text-box w-full mt-1 px-3 py-2 bg-primary-50 text-primary-900 text-sm font-medium"
+                  />
+                </div>
+              }
+            </div>
+          }
+        </div>
       </div>
     </div>
   }
