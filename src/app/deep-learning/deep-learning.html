@@ -1,23 +1,255 @@
-<div class="max-w-7xl mx-auto px-4 pb-8 flex flex-col gap-6">
-  <!-- Page Header -->
-  <div class="flex flex-col items-center justify-center text-center mt-4 mb-1">
-    <h1 class="text-3xl font-bold text-primary-700">
+<div class="w-full max-w-[1440px] mx-auto px-4 pb-8 flex flex-col gap-4">
+  <!-- Compact Page Header -->
+  <div class="flex flex-col items-center justify-center text-center mt-3">
+    <h1 class="text-2xl sm:text-3xl font-bold text-primary-700">
       Deep Learning Under The Hood
     </h1>
-    <p class="text-sm text-primary-700/80 mt-1">
-      @if (displayMode() === 'beginner') {
-        Watch how a neural network learns step by step
-      } @else {
-        Interactive neural network with forward &amp; backpropagation visualization
-      }
-    </p>
   </div>
 
-  <!-- Main Workspace -->
-  <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-    <!-- Left Column: Network Visualization + Loss Graph + Prebuilt Networks -->
-    <div class="flex flex-col gap-4 min-w-0">
-      <div class="h-[460px] lg:h-[520px]">
+  <!-- Strict Three-Column Workspace: [ Left Sidebar ] [ Main Neural Network ] [ Right Sidebar ] -->
+  <div
+    class="grid grid-cols-1 lg:grid-cols-[248px_minmax(0,1fr)_248px] xl:grid-cols-[260px_minmax(0,1fr)_252px] gap-4 items-start"
+  >
+    <!-- Column 1: Unified Left Sidebar — Dataset & Presets -->
+    <aside
+      class="w-full bg-primary-100 border border-primary-300 rounded-lg shadow-sm p-3.5 flex flex-col gap-3"
+    >
+      <!-- Sidebar Header -->
+      <div class="pb-2.5 border-b border-primary-300">
+        <h2 class="text-sm font-bold text-primary-700">Dataset &amp; Presets</h2>
+      </div>
+
+      <!-- Prebuilt Neural Networks -->
+      <div class="flex flex-col gap-2">
+        <label
+          for="presetSelect"
+          class="text-xs font-bold text-primary-700"
+        >
+          Prebuilt Neural Networks
+        </label>
+        <select
+          id="presetSelect"
+          aria-label="Select Prebuilt Neural Network"
+          class="w-full px-2.5 py-1.5 bg-primary-500 text-white rounded-md cursor-pointer text-xs font-bold hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-700"
+          [value]="nnService.activePresetId()"
+          (change)="onPresetChange($event)"
+        >
+          @if (nnService.activePresetId() === 'custom') {
+            <option value="custom" disabled>Custom Dataset</option>
+          }
+          <optgroup label="Logic Gates">
+            @for (preset of logicGatePresets; track preset.id) {
+              <option [value]="preset.id">{{ preset.name }}</option>
+            }
+          </optgroup>
+          <optgroup label="Introductory Examples">
+            @for (preset of introPresets; track preset.id) {
+              <option [value]="preset.id">{{ preset.name }}</option>
+            }
+          </optgroup>
+        </select>
+        @if (activePreset(); as preset) {
+          <p class="text-[11px] text-primary-700/90 leading-snug">
+            {{ preset.description }}
+          </p>
+        } @else {
+          <p class="text-[11px] text-primary-700/90 leading-snug">
+            Custom dataset currently active.
+          </p>
+        }
+      </div>
+
+      <!-- Custom Dataset Controls -->
+      <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+        <div class="flex flex-col gap-0.5">
+          <h3 class="text-xs font-bold text-primary-700">Custom Dataset</h3>
+          <span class="text-[11px] font-medium text-primary-700/90">
+            {{ datasetStatusLabel() }}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          class="pale-button w-full !px-3 !py-1.5 !text-xs font-bold bg-primary-600 hover:bg-primary-700"
+          (click)="onOpenDatasetModal()"
+        >
+          + Add Dataset
+        </button>
+      </div>
+
+      <!-- Edit Samples (Collapsible) -->
+      <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+        <button
+          type="button"
+          class="flex items-center justify-between w-full text-left cursor-pointer"
+          (click)="editSamplesOpen.set(!editSamplesOpen())"
+        >
+          <span class="text-xs font-bold text-primary-700">Edit Samples</span>
+          <span class="flex items-center gap-1.5">
+            <span class="text-[11px] font-semibold text-primary-600">
+              {{ nnService.trainingData().length }} rows
+            </span>
+            <span class="text-xs font-bold text-primary-600">
+              {{ editSamplesOpen() ? '−' : '+' }}
+            </span>
+          </span>
+        </button>
+
+        @if (editSamplesOpen()) {
+          <div class="flex flex-col gap-2 pt-0.5">
+            <div class="flex gap-1.5 text-[11px] font-semibold text-primary-700">
+              <span class="flex-1">Inputs (x)</span>
+              <span class="flex-1">Targets (y)</span>
+              <span class="w-5"></span>
+            </div>
+            <div class="max-h-48 overflow-y-auto flex flex-col gap-1.5 pr-0.5">
+              @for (sample of nnService.trainingData(); track $index) {
+                <div class="flex gap-1.5 items-center">
+                  <input
+                    type="text"
+                    class="text-box flex-1 min-w-0 px-1.5 py-1 text-xs bg-white text-primary-900"
+                    [value]="sample.inputs.join(', ')"
+                    (change)="onSampleChange($index, 'inputs', $event)"
+                  />
+                  <input
+                    type="text"
+                    class="text-box flex-1 min-w-0 px-1.5 py-1 text-xs bg-white text-primary-900"
+                    [value]="sample.targets.join(', ')"
+                    (change)="onSampleChange($index, 'targets', $event)"
+                  />
+                  <button
+                    type="button"
+                    class="w-5 h-5 rounded flex items-center justify-center text-red-600 hover:bg-red-100 hover:text-red-700 cursor-pointer text-sm font-bold shrink-0"
+                    title="Remove Sample"
+                    (click)="onRemoveSample($index)"
+                  >
+                    &times;
+                  </button>
+                </div>
+              }
+            </div>
+            <button
+              type="button"
+              class="pale-button w-full !py-1.5 !text-xs font-bold"
+              (click)="onAddSample()"
+            >
+              + Add Sample
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Preview Dataset (Collapsible) -->
+      <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+        <button
+          type="button"
+          class="flex items-center justify-between w-full text-left cursor-pointer"
+          (click)="previewDatasetOpen.set(!previewDatasetOpen())"
+        >
+          <span class="text-xs font-bold text-primary-700">Preview Dataset</span>
+          <span class="text-xs font-bold text-primary-600">
+            {{ previewDatasetOpen() ? '−' : '+' }}
+          </span>
+        </button>
+
+        @if (previewDatasetOpen()) {
+          <div class="max-h-52 overflow-auto border border-primary-200 rounded bg-white">
+            <table class="w-full text-left border-collapse text-[11px]">
+              <thead class="sticky top-0">
+                <tr>
+                  <th class="px-1.5 py-1 bg-primary-100 text-primary-700 border-b border-primary-200">
+                    #
+                  </th>
+                  <th class="px-1.5 py-1 bg-primary-100 text-primary-800 border-b border-primary-200">
+                    Inputs
+                  </th>
+                  <th class="px-1.5 py-1 bg-primary-100/70 text-primary-700 border-b border-primary-200">
+                    Norm. x
+                  </th>
+                  <th class="px-1.5 py-1 bg-primary-200/70 text-primary-900 border-b border-primary-300">
+                    Target
+                  </th>
+                  <th class="px-1.5 py-1 bg-primary-200/40 text-primary-800 border-b border-primary-300">
+                    Norm. y
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="font-mono text-[10px]">
+                @for (row of datasetPreviewRows(); track row.index) {
+                  <tr class="border-b border-primary-100 last:border-b-0">
+                    <td class="px-1.5 py-1 text-primary-600 font-semibold">
+                      {{ row.index }}
+                    </td>
+                    <td class="px-1.5 py-1 text-primary-900 whitespace-nowrap">
+                      {{ formatPreviewArray(row.rawInputs, 0) }}
+                    </td>
+                    <td class="px-1.5 py-1 text-primary-700 whitespace-nowrap">
+                      {{ formatPreviewArray(row.normalizedInputs, 2) }}
+                    </td>
+                    <td class="px-1.5 py-1 bg-primary-50/50 font-bold text-primary-900 whitespace-nowrap">
+                      {{ formatPreviewArray(row.rawTargets, 0) }}
+                    </td>
+                    <td class="px-1.5 py-1 bg-primary-50/30 text-primary-700 whitespace-nowrap">
+                      {{ formatPreviewArray(row.normalizedTargets, 2) }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Normalization Details (Collapsible) -->
+      <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+        <button
+          type="button"
+          class="flex items-center justify-between w-full text-left cursor-pointer"
+          (click)="normalizationDetailsOpen.set(!normalizationDetailsOpen())"
+        >
+          <span class="text-xs font-bold text-primary-700">Normalization Details</span>
+          <span class="text-xs font-bold text-primary-600">
+            {{ normalizationDetailsOpen() ? '−' : '+' }}
+          </span>
+        </button>
+
+        @if (normalizationDetailsOpen()) {
+          <div class="flex flex-col gap-2 text-xs">
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] font-semibold text-primary-700">
+                Inputs (Min-Max [0, 1])
+              </span>
+              <div class="flex flex-wrap gap-1">
+                @for (label of inputFeatureLabels(); track $index) {
+                  <span class="px-1.5 py-0.5 rounded bg-white border border-primary-200 font-mono text-[11px] text-primary-900">
+                    <strong>{{ label }}</strong>: [{{ formatPreviewNumber(nnService.normalizationStats().min[$index]) }},
+                    {{ formatPreviewNumber(nnService.normalizationStats().max[$index]) }}]
+                  </span>
+                }
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] font-semibold text-primary-700">
+                Targets (Min-Max [0, 1])
+              </span>
+              <div class="flex flex-wrap gap-1">
+                @for (label of targetFeatureLabels(); track $index) {
+                  <span class="px-1.5 py-0.5 rounded bg-white border border-primary-200 font-mono text-[11px] text-primary-900">
+                    <strong>{{ label }}</strong>: [{{ formatPreviewNumber(nnService.targetNormalizationStats().min[$index]) }},
+                    {{ formatPreviewNumber(nnService.targetNormalizationStats().max[$index]) }}]
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </aside>
+
+    <!-- Column 2: Center — Main Neural Network Visualization + Loss Over Time -->
+    <main class="flex flex-col gap-4 min-w-0">
+      <div class="h-[460px] lg:h-[540px] w-full">
         <app-neural-canvas
           [network]="nnService.network()"
           [displayMode]="displayMode()"
@@ -28,78 +260,19 @@
         />
       </div>
 
-      <div>
+      <div class="w-full">
         <app-loss-graph
           [lossHistory]="nnService.training().lossHistory"
           [currentLoss]="nnService.training().currentLoss"
         />
       </div>
+    </main>
 
-      <!-- Prebuilt Neural Networks Selector (directly below Loss Over Time) -->
-      <div class="bg-primary-50 border-2 border-primary-300 rounded-lg shadow p-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="flex flex-col gap-0.5">
-            <label
-              for="presetSelect"
-              class="text-sm font-bold text-primary-700 uppercase tracking-wider"
-            >
-              Prebuilt Neural Networks
-            </label>
-            @if (activePreset(); as preset) {
-              <p class="text-xs text-primary-700/80">
-                {{ preset.description }}
-              </p>
-            }
-          </div>
-
-          <div class="flex items-center gap-2 shrink-0">
-            <select
-              id="presetSelect"
-              class="px-3 py-2 bg-primary-500 text-white rounded-md cursor-pointer text-xs font-bold hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-700"
-              [value]="nnService.activePresetId()"
-              (change)="onPresetChange($event)"
-            >
-              <optgroup label="Logic Gates">
-                @for (preset of logicGatePresets; track preset.id) {
-                  <option [value]="preset.id">{{ preset.name }}</option>
-                }
-              </optgroup>
-              <optgroup label="Introductory Examples">
-                @for (preset of introPresets; track preset.id) {
-                  <option [value]="preset.id">{{ preset.name }}</option>
-                }
-              </optgroup>
-            </select>
-          </div>
-        </div>
-
-        <div class="mt-3 pt-2.5 border-t border-primary-200 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-primary-700">
-          <span>
-            Architecture:
-            <strong class="text-primary-900">{{ activePresetArchitecture() }}</strong>
-          </span>
-          <span>
-            Samples:
-            <strong class="text-primary-900">{{ nnService.trainingData().length }}</strong>
-          </span>
-          <span>
-            Learning Rate:
-            <strong class="text-primary-900">{{ nnService.config().learningRate }}</strong>
-          </span>
-          <span>
-            Activation:
-            <strong class="text-primary-900 uppercase">{{ nnService.config().activationFn }}</strong>
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Column: Control Panel Sidebar -->
-    <div class="w-full lg:w-[320px] shrink-0">
+    <!-- Column 3: Right Sidebar — Network Controls -->
+    <aside class="w-full">
       <app-control-panel
         [config]="nnService.config()"
         [trainingState]="nnService.training()"
-        [trainingData]="nnService.trainingData()"
         [displayMode]="displayMode()"
         [defaultInferenceInput]="defaultInferenceInput()"
         (forwardPass)="onForwardPass()"
@@ -113,16 +286,33 @@
         (removeLayer)="onRemoveLayer()"
         (layerSizeChange)="onLayerSizeChange($event)"
         (speedChange)="onSpeedChange($event)"
-        (updateTrainingData)="onUpdateTrainingData($event)"
         (runInference)="onRunInference($event)"
       />
-    </div>
+    </aside>
   </div>
+
+  <!-- Custom Dataset Modal -->
+  @if (datasetModalOpen()) {
+    <div
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      (click)="onCloseDatasetModal()"
+    >
+      <div
+        class="bg-white p-5 rounded-lg shadow-lg border-2 border-primary-500 w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        (click)="$event.stopPropagation()"
+      >
+        <app-custom-dataset
+          (applyDataset)="onApplyCustomDataset($event)"
+          (close)="onCloseDatasetModal()"
+        />
+      </div>
+    </div>
+  }
 
   <!-- Node Editor Modal -->
   @if (selectedNeuron(); as neuron) {
     <div
-      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       (click)="onCloseNodeEditor()"
     >
       <div
@@ -130,9 +320,10 @@
         (click)="$event.stopPropagation()"
       >
         <div class="flex justify-between items-center pb-3 mb-4 border-b border-primary-200">
-          <h3 class="text-lg font-bold text-primary-700">Edit Neuron</h3>
+          <h3 class="text-base font-bold text-primary-700">Edit Neuron</h3>
           <button
-            class="text-primary-500 hover:text-primary-800 text-lg leading-none p-1 cursor-pointer transition font-bold"
+            type="button"
+            class="text-primary-500 hover:text-primary-800 text-lg leading-none p-1 cursor-pointer font-bold"
             (click)="onCloseNodeEditor()"
           >
             &times;
@@ -141,7 +332,7 @@
 
         <div class="flex flex-col gap-3">
           <div class="flex flex-col">
-            <label class="text-xs font-semibold uppercase tracking-wider text-primary-700">
+            <label class="text-xs font-semibold text-primary-700">
               Bias (b)
             </label>
             <input
@@ -154,7 +345,7 @@
           </div>
 
           @if (selectedNeuronConnections().length > 0) {
-            <h4 class="text-xs font-bold uppercase tracking-wider text-primary-700 mt-2 pt-3 border-t border-primary-200">
+            <h4 class="text-xs font-bold text-primary-700 mt-2 pt-3 border-t border-primary-200">
               Incoming Weights
             </h4>
             <div class="flex flex-col gap-3">

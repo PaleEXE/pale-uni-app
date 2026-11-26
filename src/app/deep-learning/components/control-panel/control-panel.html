@@ -1,75 +1,101 @@
 <div
-  class="bg-primary-100 border border-primary-300 rounded-lg shadow p-5 flex flex-col gap-5"
+  class="bg-primary-100 border border-primary-300 rounded-lg shadow-sm p-3.5 flex flex-col gap-3"
 >
   <!-- Header -->
-  <div class="flex justify-between items-center pb-3 border-b border-primary-300">
-    <h2 class="text-lg font-bold text-primary-700">Controls</h2>
+  <div class="flex justify-between items-center pb-2.5 border-b border-primary-300">
+    <h2 class="text-sm font-bold text-primary-700">Controls</h2>
     <button
-      class="px-3 py-1 rounded-md text-xs font-bold bg-white border border-primary-300 text-primary-700 hover:bg-primary-50 shadow-sm cursor-pointer transition"
+      type="button"
+      class="px-2.5 py-1 rounded-md text-xs font-semibold bg-white border border-primary-300 text-primary-700 hover:bg-primary-50 cursor-pointer"
       (click)="onToggleMode()"
     >
       {{ displayMode() === 'beginner' ? 'Beginner' : 'Advanced' }}
     </button>
   </div>
 
-  <!-- Training Data Section -->
+  <!-- Training (Essential - open by default) -->
   <div class="flex flex-col gap-2.5">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-primary-700">
-      Training Data
-    </h3>
-    <div class="flex flex-col gap-2">
-      <div class="flex gap-2 text-[11px] font-semibold text-primary-700">
-        <span class="flex-1">Inputs (x)</span>
-        <span class="flex-1">Targets (y)</span>
-        <span class="w-6"></span>
-      </div>
-      @for (sample of trainingData(); track $index) {
-        <div class="flex gap-2 items-center">
-          <input
-            type="text"
-            class="text-box flex-1 min-w-0 px-2 py-1 text-xs bg-white text-primary-900"
-            [value]="sample.inputs.join(', ')"
-            (change)="onSampleChange($index, 'inputs', $event)"
-          />
-          <input
-            type="text"
-            class="text-box flex-1 min-w-0 px-2 py-1 text-xs bg-white text-primary-900"
-            [value]="sample.targets.join(', ')"
-            (change)="onSampleChange($index, 'targets', $event)"
-          />
+    <button
+      type="button"
+      class="flex items-center justify-between w-full text-left cursor-pointer"
+      (click)="trainingOpen.set(!trainingOpen())"
+    >
+      <span class="text-xs font-bold text-primary-700">Training</span>
+      <span class="text-xs font-bold text-primary-600">
+        {{ trainingOpen() ? '−' : '+' }}
+      </span>
+    </button>
+
+    @if (trainingOpen()) {
+      <div class="flex flex-col gap-2.5">
+        <div class="grid grid-cols-2 gap-1.5">
           <button
-            class="w-6 h-6 rounded flex items-center justify-center text-red-600 hover:bg-red-100 hover:text-red-700 cursor-pointer transition text-sm font-bold shrink-0"
-            title="Remove sample"
-            (click)="onRemoveSample($index)"
+            type="button"
+            class="pale-button !px-2 !py-1.5 !text-xs font-bold bg-primary-500 hover:bg-primary-600 flex items-center justify-center whitespace-nowrap"
+            (click)="onForwardPass()"
           >
-            &times;
+            Forward
+          </button>
+          <button
+            type="button"
+            class="pale-button !px-2 !py-1.5 !text-xs font-bold bg-primary-600 hover:bg-primary-700 flex items-center justify-center whitespace-nowrap"
+            (click)="onTrainStep()"
+          >
+            Train Step
+          </button>
+          <button
+            type="button"
+            class="pale-button !px-2 !py-1.5 !text-xs font-bold flex items-center justify-center whitespace-nowrap"
+            [class.bg-green-600]="!isAutoTraining()"
+            [class.hover:bg-green-700]="!isAutoTraining()"
+            [class.bg-primary-700]="isAutoTraining()"
+            [class.hover:bg-primary-800]="isAutoTraining()"
+            (click)="onAutoTrain()"
+          >
+            {{ isAutoTraining() ? 'Pause' : 'Auto Train' }}
+          </button>
+          <button
+            type="button"
+            class="pale-button !px-2 !py-1.5 !text-xs font-bold bg-red-600 hover:bg-red-700 flex items-center justify-center whitespace-nowrap"
+            (click)="onReset()"
+          >
+            Reset
           </button>
         </div>
-      }
-      <button
-        class="pale-button w-full mt-1 !py-1.5 !text-xs font-bold"
-        (click)="onAddSample()"
-      >
-        + Add Sample
-      </button>
-    </div>
+
+        <div>
+          <div class="flex justify-between text-xs text-primary-700 mb-1">
+            <label class="font-medium">Speed</label>
+            <span class="font-bold text-primary-900">{{ animationSpeed() }}x</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="50"
+            step="1"
+            [value]="animationSpeed()"
+            (input)="onSpeedChange($event)"
+            class="slider !w-full"
+          />
+        </div>
+      </div>
+    }
   </div>
 
-  <!-- Live Inference Section -->
-  <div class="flex flex-col gap-2.5 border-t border-primary-300 pt-4">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-primary-700">
-      Live Inference
-    </h3>
-    <div class="flex gap-2">
+  <!-- Live Inference (Essential - always accessible) -->
+  <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+    <h3 class="text-xs font-bold text-primary-700">Predict</h3>
+    <div class="flex gap-1.5">
       <input
         type="text"
-        class="text-box flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-white text-primary-900"
+        class="text-box flex-1 min-w-0 px-2 py-1.5 text-xs bg-white text-primary-900"
         placeholder="e.g. 0, 1"
         (change)="onInferenceChange($event)"
         [value]="inferenceInputs().join(', ')"
       />
       <button
-        class="pale-button shrink-0 !py-1.5 !px-3 !text-xs font-bold bg-primary-500 hover:bg-primary-600"
+        type="button"
+        class="pale-button shrink-0 !py-1.5 !px-2.5 !text-xs font-bold bg-primary-500 hover:bg-primary-600"
         (click)="onRunInference()"
       >
         Predict
@@ -77,185 +103,182 @@
     </div>
   </div>
 
-  <!-- Network Architecture -->
-  <div class="flex flex-col gap-2.5 border-t border-primary-300 pt-4">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-primary-700">
-      Architecture
-    </h3>
+  <!-- Training Info (Essential - open by default) -->
+  <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+    <button
+      type="button"
+      class="flex items-center justify-between w-full text-left cursor-pointer"
+      (click)="trainingInfoOpen.set(!trainingInfoOpen())"
+    >
+      <span class="text-xs font-bold text-primary-700">Training Info</span>
+      <span class="text-xs font-bold text-primary-600">
+        {{ trainingInfoOpen() ? '−' : '+' }}
+      </span>
+    </button>
 
-    <div class="flex flex-col gap-2 bg-white/60 border border-primary-200 rounded p-2.5">
-      <div class="flex justify-between items-center gap-2">
-        <label class="text-xs font-medium text-primary-700">Hidden Layers</label>
-        <div class="flex items-center gap-1.5">
-          <button
-            class="w-7 h-7 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition"
-            (click)="onRemoveLayer()"
-            [disabled]="hiddenLayerCount() === 0"
-          >
-            −
-          </button>
-          <span class="min-w-[24px] text-center text-xs font-bold text-primary-900">
-            {{ hiddenLayerCount() }}
-          </span>
-          <button
-            class="w-7 h-7 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition"
-            (click)="onAddLayer()"
-            [disabled]="hiddenLayerCount() >= 5"
-          >
-            +
-          </button>
+    @if (trainingInfoOpen()) {
+      <div class="flex flex-col gap-2">
+        <div class="grid grid-cols-2 gap-1.5">
+          <div class="bg-white/80 px-2 py-1.5 rounded border border-primary-200">
+            <div class="text-[11px] font-semibold text-primary-600">Steps</div>
+            <div class="text-sm font-bold text-primary-900">{{ epoch() }}</div>
+          </div>
+          <div class="bg-white/80 px-2 py-1.5 rounded border border-primary-200">
+            <div class="text-[11px] font-semibold text-primary-600">Loss (MSE)</div>
+            <div class="text-sm font-bold text-primary-700">{{ currentLoss().toFixed(5) }}</div>
+          </div>
+        </div>
+
+        <div class="bg-white/80 px-2.5 py-2 rounded border border-primary-200 flex flex-col gap-1 text-xs">
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-[11px] font-semibold text-primary-600">Input</span>
+            <span class="font-mono font-bold text-primary-900 truncate">{{ formatArray(currentInputs()) }}</span>
+          </div>
+          @if (displayMode() === 'advanced') {
+            <div class="flex justify-between items-center gap-2">
+              <span class="text-[11px] font-semibold text-primary-600">Normalized Input</span>
+              <span class="font-mono font-semibold text-primary-700 truncate">{{ formatArray(currentNormalizedInputs()) }}</span>
+            </div>
+          }
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-[11px] font-semibold text-primary-600">Output</span>
+            <span class="font-mono font-bold text-primary-900 truncate">{{ formatArray(currentOutputs()) }}</span>
+          </div>
+          <div class="flex justify-between items-center gap-2">
+            <span class="text-[11px] font-semibold text-primary-600">Target</span>
+            <span class="font-mono font-bold text-primary-900 truncate">{{ formatArray(currentTargets()) }}</span>
+          </div>
         </div>
       </div>
+    }
+  </div>
 
-      @for (layer of hiddenLayerSizes(); track $index) {
-        <div class="flex justify-between items-center gap-2 pt-1.5 border-t border-primary-200/70">
-          <label class="text-xs font-medium text-primary-700">
-            Layer {{ $index + 1 }} neurons
-          </label>
-          <div class="flex items-center gap-1.5">
+  <!-- Architecture (Collapsible - collapsed by default) -->
+  <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+    <button
+      type="button"
+      class="flex items-center justify-between w-full text-left cursor-pointer"
+      (click)="architectureOpen.set(!architectureOpen())"
+    >
+      <span class="text-xs font-bold text-primary-700">Architecture</span>
+      <span class="flex items-center gap-2">
+        <span class="text-[11px] font-mono font-semibold text-primary-600">
+          {{ architectureSummary() }}
+        </span>
+        <span class="text-xs font-bold text-primary-600">
+          {{ architectureOpen() ? '−' : '+' }}
+        </span>
+      </span>
+    </button>
+
+    @if (architectureOpen()) {
+      <div class="flex flex-col gap-2 bg-white/70 border border-primary-200 rounded p-2">
+        <div class="flex justify-between items-center gap-2">
+          <label class="text-xs font-medium text-primary-700">Hidden Layers</label>
+          <div class="flex items-center gap-1">
             <button
-              class="w-7 h-7 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition"
-              (click)="onChangeLayerSize($index, -1)"
-              [disabled]="layer <= 1"
+              type="button"
+              class="w-6 h-6 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
+              (click)="onRemoveLayer()"
+              [disabled]="hiddenLayerCount() === 0"
             >
               −
             </button>
-            <span class="min-w-[24px] text-center text-xs font-bold text-primary-900">
-              {{ layer }}
+            <span class="min-w-[20px] text-center text-xs font-bold text-primary-900">
+              {{ hiddenLayerCount() }}
             </span>
             <button
-              class="w-7 h-7 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center transition"
-              (click)="onChangeLayerSize($index, 1)"
-              [disabled]="layer >= 8"
+              type="button"
+              class="w-6 h-6 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
+              (click)="onAddLayer()"
+              [disabled]="hiddenLayerCount() >= 5"
             >
               +
             </button>
           </div>
         </div>
-      }
-    </div>
+
+        @for (layer of hiddenLayerSizes(); track $index) {
+          <div class="flex justify-between items-center gap-2 pt-1.5 border-t border-primary-200/70">
+            <label class="text-xs font-medium text-primary-700">
+              Layer {{ $index + 1 }}
+            </label>
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                class="w-6 h-6 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
+                (click)="onChangeLayerSize($index, -1)"
+                [disabled]="layer <= 1"
+              >
+                −
+              </button>
+              <span class="min-w-[20px] text-center text-xs font-bold text-primary-900">
+                {{ layer }}
+              </span>
+              <button
+                type="button"
+                class="w-6 h-6 rounded border border-primary-300 bg-white text-primary-700 font-bold hover:bg-primary-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
+                (click)="onChangeLayerSize($index, 1)"
+                [disabled]="layer >= 8"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 
-  <!-- Hyperparameters -->
-  <div class="flex flex-col gap-3 border-t border-primary-300 pt-4">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-primary-700">
-      Hyperparameters
-    </h3>
+  <!-- Hyperparameters (Collapsible - collapsed by default) -->
+  <div class="flex flex-col gap-2 border-t border-primary-300 pt-3">
+    <button
+      type="button"
+      class="flex items-center justify-between w-full text-left cursor-pointer"
+      (click)="hyperparametersOpen.set(!hyperparametersOpen())"
+    >
+      <span class="text-xs font-bold text-primary-700">Hyperparameters</span>
+      <span class="flex items-center gap-2">
+        <span class="text-[11px] font-semibold text-primary-600">
+          {{ learningRate().toFixed(2) }} &middot; {{ activationLabel() }}
+        </span>
+        <span class="text-xs font-bold text-primary-600">
+          {{ hyperparametersOpen() ? '−' : '+' }}
+        </span>
+      </span>
+    </button>
 
-    <div>
-      <div class="flex justify-between text-xs text-primary-700 mb-1.5">
-        <label class="font-medium">Learning Rate</label>
-        <span class="font-bold text-primary-900">{{ learningRate().toFixed(3) }}</span>
+    @if (hyperparametersOpen()) {
+      <div class="flex flex-col gap-2.5 pt-1">
+        <div>
+          <div class="flex justify-between text-xs text-primary-700 mb-1">
+            <label class="font-medium">Learning Rate</label>
+            <span class="font-bold text-primary-900">{{ learningRate().toFixed(3) }}</span>
+          </div>
+          <input
+            type="range"
+            min="0.001"
+            max="1"
+            step="0.001"
+            [value]="learningRate()"
+            (input)="onLearningRateChange($event)"
+            class="slider !w-full"
+          />
+        </div>
+
+        <div class="flex justify-between items-center gap-2">
+          <label class="text-xs font-medium text-primary-700">Activation</label>
+          <select
+            class="px-2.5 py-1.5 bg-primary-500 text-white rounded-md cursor-pointer text-xs font-bold hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-700"
+            [value]="activationFn()"
+            (change)="onActivationChange($event)"
+          >
+            <option value="sigmoid">Sigmoid</option>
+            <option value="relu">ReLU</option>
+            <option value="tanh">Tanh</option>
+          </select>
+        </div>
       </div>
-      <input
-        type="range"
-        min="0.001"
-        max="1"
-        step="0.001"
-        [value]="learningRate()"
-        (input)="onLearningRateChange($event)"
-        class="slider !w-full"
-      />
-    </div>
-
-    <div class="flex justify-between items-center gap-3">
-      <label class="text-xs font-medium text-primary-700">Activation</label>
-      <select
-        class="px-3 py-1.5 bg-primary-500 text-white rounded-md cursor-pointer text-xs font-bold hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-700"
-        [value]="activationFn()"
-        (change)="onActivationChange($event)"
-      >
-        <option value="sigmoid">Sigmoid</option>
-        <option value="relu">ReLU</option>
-        <option value="tanh">Tanh</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Animation Controls -->
-  <div class="flex flex-col gap-3 border-t border-primary-300 pt-4">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-primary-700">
-      Actions
-    </h3>
-
-    <div class="grid grid-cols-2 gap-2">
-      <button
-        class="pale-button !px-2.5 !py-2 !text-xs font-bold bg-primary-500 hover:bg-primary-600 flex items-center justify-center"
-        (click)="onForwardPass()"
-      >
-        Forward
-      </button>
-      <button
-        class="pale-button !px-2.5 !py-2 !text-xs font-bold bg-primary-600 hover:bg-primary-700 flex items-center justify-center"
-        (click)="onTrainStep()"
-      >
-        Train Step
-      </button>
-      <button
-        class="pale-button !px-2.5 !py-2 !text-xs font-bold flex items-center justify-center"
-        [class.bg-green-600]="!isAutoTraining()"
-        [class.hover:bg-green-700]="!isAutoTraining()"
-        [class.bg-primary-700]="isAutoTraining()"
-        [class.hover:bg-primary-800]="isAutoTraining()"
-        (click)="onAutoTrain()"
-      >
-        {{ isAutoTraining() ? 'Pause' : 'Auto Train' }}
-      </button>
-      <button
-        class="pale-button !px-2.5 !py-2 !text-xs font-bold bg-red-600 hover:bg-red-700 flex items-center justify-center"
-        (click)="onReset()"
-      >
-        Reset
-      </button>
-    </div>
-
-    <div>
-      <div class="flex justify-between text-xs text-primary-700 mb-1.5">
-        <label class="font-medium">Animation Speed</label>
-        <span class="font-bold text-primary-900">{{ animationSpeed() }}x</span>
-      </div>
-      <input
-        type="range"
-        min="1"
-        max="50"
-        step="1"
-        [value]="animationSpeed()"
-        (input)="onSpeedChange($event)"
-        class="slider !w-full"
-      />
-    </div>
-  </div>
-
-  <!-- Training Info -->
-  <div class="flex flex-col gap-2.5 border-t border-primary-300 pt-4">
-    <h3 class="text-xs font-bold uppercase tracking-wider text-primary-700">
-      Training Info
-    </h3>
-
-    <div class="grid grid-cols-2 gap-2">
-      <div class="bg-white/70 p-2 rounded border border-primary-200">
-        <div class="text-[10px] font-semibold text-primary-600 uppercase">Steps</div>
-        <div class="text-sm font-bold text-primary-900">{{ epoch() }}</div>
-      </div>
-      <div class="bg-white/70 p-2 rounded border border-primary-200">
-        <div class="text-[10px] font-semibold text-primary-600 uppercase">Loss (MSE)</div>
-        <div class="text-sm font-bold text-primary-700">{{ currentLoss().toFixed(6) }}</div>
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-1.5">
-      <div class="bg-white/70 px-2.5 py-1.5 rounded border border-primary-200 flex justify-between items-center">
-        <span class="text-[11px] font-semibold text-primary-600">Input</span>
-        <span class="text-xs font-bold text-primary-900">{{ formatArray(currentInputs()) }}</span>
-      </div>
-      <div class="bg-white/70 px-2.5 py-1.5 rounded border border-primary-200 flex justify-between items-center">
-        <span class="text-[11px] font-semibold text-primary-600">Output</span>
-        <span class="text-xs font-bold text-primary-900">{{ formatArray(currentOutputs()) }}</span>
-      </div>
-      <div class="bg-white/70 px-2.5 py-1.5 rounded border border-primary-200 flex justify-between items-center">
-        <span class="text-[11px] font-semibold text-primary-600">Target</span>
-        <span class="text-xs font-bold text-primary-900">{{ formatArray(currentTargets()) }}</span>
-      </div>
-    </div>
+    }
   </div>
 </div>

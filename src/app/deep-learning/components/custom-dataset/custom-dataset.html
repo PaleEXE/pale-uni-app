@@ -1,0 +1,86 @@
+<div class="flex flex-col gap-4">
+  <!-- Modal Header -->
+  <div class="flex items-center justify-between pb-3 border-b border-primary-200">
+    <div>
+      <h2 class="text-base font-bold text-primary-700">Custom Dataset Input</h2>
+      <p class="text-xs text-primary-600 mt-0.5">
+        One row per line:
+        <code class="font-mono text-primary-900">x1, x2, ..., y</code>
+      </p>
+    </div>
+    <button
+      type="button"
+      class="text-primary-500 hover:text-primary-800 text-lg leading-none p-1 cursor-pointer font-bold"
+      aria-label="Close dataset editor"
+      (click)="onClose()"
+    >
+      &times;
+    </button>
+  </div>
+
+  <!-- Multiline Editor -->
+  <textarea
+    id="customDatasetTextarea"
+    rows="6"
+    class="text-box w-full px-3 py-2 text-xs font-mono bg-primary-50/50 text-primary-900 leading-relaxed resize-y"
+    placeholder="10, 200, 1, 50&#10;20, 400, 2, 100&#10;30, 600, 3, 150"
+    [value]="rawText()"
+    (input)="onTextInput($event)"
+  ></textarea>
+
+  <!-- Validation Feedback -->
+  @if (parseResult().errors.length > 0) {
+    <div
+      class="bg-red-50 border border-red-300 rounded-md p-2.5 text-xs text-red-700 flex flex-col gap-1"
+      role="alert"
+    >
+      <span class="font-bold text-xs">
+        Validation Errors
+      </span>
+      <ul class="list-disc pl-4 flex flex-col gap-0.5">
+        @for (err of parseResult().errors; track $index) {
+          <li>{{ err }}</li>
+        }
+      </ul>
+    </div>
+  } @else if (parseResult().isValid) {
+    <div class="text-xs font-medium text-primary-700">
+      Valid:
+      <strong class="text-primary-900">
+        {{ parseResult().samples.length }} sample{{ parseResult().samples.length === 1 ? '' : 's' }}
+        &middot;
+        {{ parseResult().inputCount }} input{{ parseResult().inputCount === 1 ? '' : 's' }}
+        &middot;
+        1 target
+      </strong>
+    </div>
+  }
+
+  <!-- Modal Actions -->
+  <div class="flex items-center justify-between gap-2 pt-2 border-t border-primary-200">
+    <button
+      type="button"
+      class="px-3 py-1.5 rounded-md text-xs font-semibold bg-white border border-primary-300 text-primary-700 hover:bg-primary-50 cursor-pointer"
+      (click)="onLoadExample()"
+    >
+      Load Example
+    </button>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="px-3 py-1.5 rounded-md text-xs font-semibold text-primary-700 hover:bg-primary-100 cursor-pointer"
+        (click)="onClose()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="pale-button !px-3.5 !py-1.5 !text-xs font-bold bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        [disabled]="!parseResult().isValid"
+        (click)="onApplyDataset()"
+      >
+        Apply Dataset
+      </button>
+    </div>
+  </div>
+</div>

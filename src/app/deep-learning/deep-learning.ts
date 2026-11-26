@@ -16,6 +16,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { NeuralCanvasComponent } from './components/neural-canvas/neural-canvas';
 import { ControlPanelComponent } from './components/control-panel/control-panel';
 import { LossGraphComponent } from './components/loss-graph/loss-graph';
+import { CustomDatasetComponent } from './components/custom-dataset/custom-dataset';
 import { NeuralNetworkService } from './engine/neural-network.service';
 import {
   NETWORK_PRESETS,
@@ -33,7 +34,12 @@ import {
 @Component({
   selector: 'app-deep-learning',
   standalone: true,
-  imports: [NeuralCanvasComponent, ControlPanelComponent, LossGraphComponent],
+  imports: [
+    NeuralCanvasComponent,
+    ControlPanelComponent,
+    LossGraphComponent,
+    CustomDatasetComponent,
+  ],
   providers: [NeuralNetworkService],
   templateUrl: './deep-learning.html',
   styleUrl: './deep-learning.css',
@@ -54,18 +60,49 @@ export class DeepLearningComponent implements OnDestroy {
   readonly particleProgress = signal(0);
   readonly selectedNeuron = signal<NeuronState | null>(null);
 
+  // Progressive-disclosure UI state (all secondary details hidden by default)
+  readonly datasetModalOpen = signal(false);
+  readonly editSamplesOpen = signal(false);
+  readonly previewDatasetOpen = signal(false);
+  readonly normalizationDetailsOpen = signal(false);
+
   readonly activePreset = computed(() =>
     getPresetById(this.nnService.activePresetId())
   );
 
-  readonly activePresetArchitecture = computed(() => {
-    const sizes = this.nnService.layerSizes();
-    return sizes.join(' -> ');
+  readonly datasetStatusLabel = computed(() => {
+    const samples = this.nnService.trainingData().length;
+    const inputs = this.nnService.config().inputSize;
+    const outputs = this.nnService.config().outputSize;
+    return `${samples} sample${samples === 1 ? '' : 's'} · ${inputs} input${inputs === 1 ? '' : 's'} · ${outputs} target${outputs === 1 ? '' : 's'}`;
+  });
+
+  readonly inputFeatureLabels = computed(() =>
+    Array.from({ length: this.nnService.config().inputSize }, (_, i) => `x${i + 1}`)
+  );
+
+  readonly targetFeatureLabels = computed(() => {
+    const count = this.nnService.config().outputSize;
+    if (count === 1) return ['y'];
+    return Array.from({ length: count }, (_, i) => `y${i + 1}`);
+  });
+
+  readonly datasetPreviewRows = computed(() => {
+    const data = this.nnService.trainingData();
+    return data.map((sample, idx) => ({
+      index: idx + 1,
+      rawInputs: sample.inputs,
+      normalizedInputs: this.nnService.normalizeInputs(sample.inputs),
+      rawTargets: sample.targets,
+      normalizedTargets: this.nnService.normalizeTargets(sample.targets),
+    }));
   });
 
   readonly defaultInferenceInput = computed(() => {
     const preset = this.activePreset();
     if (preset) return preset.defaultInferenceInput;
+    const data = this.nnService.trainingData();
+    if (data.length > 0) return [...data[0].inputs];
     return new Array(this.nnService.config().inputSize).fill(0);
   });
 
@@ -104,6 +141,47 @@ export class DeepLearningComponent implements OnDestroy {
     this.nnService.loadPreset(preset);
   }
 
+  onOpenDatasetModal(): void {
+    this.datasetModalOpen.set(true);
+  }
+
+  onCloseDatasetModal(): void {
+    this.datasetModalOpen.set(false);
+  }
+
+  onApplyCustomDataset(event: {
+    samples: TrainingSample[];
+    inputSize: number;
+    outputSize: number;
+  }): void {
+    this.stopAutoTrain();
+    this.cancelAnimation();
+    this.selectedNeuron.set(null);
+    this.nnService.loadCustomDataset(
+      event.samples,
+      event.inputSize,
+      event.outputSize
+    );
+    this.datasetModalOpen.set(false);
+  }
+
+  formatPreviewNumber(val: number): string {
+    if (!Number.isFinite(val)) return '0';
+    return Number.isInteger(val) ? String(val) : val.toFixed(3);
+  }
+
+  formatPreviewArray(arr: number[], decimals: number): string {
+    return (
+      '[' +
+      arr
+        .map((v) =>
+          decimals === 0 && Number.isInteger(v) ? String(v) : v.toFixed(decimals)
+        )
+        .join(', ') +
+      ']'
+    );
+  }
+
   // ─── Forward Pass with Animation ────────────────────────────────
 
   onForwardPass(): void {
@@ -113,9 +191,11 @@ export class DeepLearningComponent implements OnDestroy {
 
     const sample = data[this.nnService.sampleIndex % data.length];
     this.nnService.forwardPass(sample.inputs);
+    const normalizedTargets = this.nnService.normalizeTargets(sample.targets);
     this.nnService.training.update((t) => ({
       ...t,
       currentTargets: [...sample.targets],
+      currentNormalizedTargets: normalizedTargets,
     }));
     this.animateForwardPass();
   }
@@ -259,6 +339,38 @@ export class DeepLearningComponent implements OnDestroy {
     this.nnService.setTrainingData(data);
   }
 
+  onSampleChange(index: number, type: 'inputs' | 'targets', event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    const parsed = val
+      .split(',')
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n));
+    const newData = [...this.nnService.trainingData()];
+    if (type === 'inputs') {
+      newData[index] = { ...newData[index], inputs: parsed };
+    } else {
+      newData[index] = { ...newData[index], targets: parsed };
+    }
+    this.nnService.setTrainingData(newData);
+  }
+
+  onRemoveSample(index: number): void {
+    const newData = this.nnService.trainingData().filter((_, i) => i !== index);
+    this.nnService.setTrainingData(newData);
+  }
+
+  onAddSample(): void {
+    const cfg = this.nnService.config();
+    const newData = [
+      ...this.nnService.trainingData(),
+      {
+        inputs: new Array(cfg.inputSize).fill(0),
+        targets: new Array(cfg.outputSize).fill(0),
+      },
+    ];
+    this.nnService.setTrainingData(newData);
+  }
+
   onRunInference(inputs: number[]): void {
     this.nnService.predict(inputs);
     this.animateForwardPass();
@@ -341,9 +453,22 @@ export class DeepLearningComponent implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      if (this.datasetModalOpen()) {
+        this.onCloseDatasetModal();
+        return;
+      }
+      if (this.selectedNeuron()) {
+        this.onCloseNodeEditor();
+        return;
+      }
+    }
+
     if (
+      this.datasetModalOpen() ||
       event.target instanceof HTMLInputElement ||
-      event.target instanceof HTMLSelectElement
+      event.target instanceof HTMLSelectElement ||
+      event.target instanceof HTMLTextAreaElement
     ) {
       return;
     }

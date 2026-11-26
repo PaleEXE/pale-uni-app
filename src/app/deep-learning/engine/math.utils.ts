@@ -3,7 +3,11 @@
  * No Angular dependencies — these are stateless utility functions.
  */
 
-import { ActivationFnType } from './neural-network.types';
+import {
+  ActivationFnType,
+  NormalizationStats,
+  TrainingSample,
+} from './neural-network.types';
 
 // ─── Activation Functions ────────────────────────────────────────────
 
@@ -149,4 +153,143 @@ export function gradientDescentUpdate(
   learningRate: number
 ): number {
   return weight - learningRate * gradient;
+}
+
+// ─── Input Normalization (Min-Max [0, 1]) ────────────────────────────
+
+/**
+ * Compute per-feature minimum and maximum values from the training dataset only.
+ * Returns identity bounds [0, 1] when the dataset is empty.
+ */
+export function computeMinMaxStats(
+  samples: TrainingSample[],
+  inputSize: number
+): NormalizationStats {
+  if (inputSize <= 0) {
+    return { min: [], max: [] };
+  }
+
+  if (samples.length === 0) {
+    return {
+      min: new Array(inputSize).fill(0),
+      max: new Array(inputSize).fill(1),
+    };
+  }
+
+  const min = new Array<number>(inputSize).fill(Infinity);
+  const max = new Array<number>(inputSize).fill(-Infinity);
+
+  for (const sample of samples) {
+    for (let i = 0; i < inputSize; i++) {
+      const raw = sample.inputs[i] ?? 0;
+      const value = Number.isFinite(raw) ? raw : 0;
+      if (value < min[i]) min[i] = value;
+      if (value > max[i]) max[i] = value;
+    }
+  }
+
+  return { min, max };
+}
+
+/**
+ * Min-Max normalize a single numerical feature value to [0, 1] using
+ * training-set bounds. Safely returns 0 when min === max to avoid division by zero.
+ */
+export function normalizeValue(value: number, min: number, max: number): number {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const range = max - min;
+  if (!Number.isFinite(range) || range === 0) {
+    return 0;
+  }
+  return (safeValue - min) / range;
+}
+
+/**
+ * Normalize an input feature vector using precomputed Min-Max statistics.
+ */
+export function normalizeInputs(
+  inputs: number[],
+  stats: NormalizationStats
+): number[] {
+  return stats.min.map((minVal, i) =>
+    normalizeValue(inputs[i] ?? 0, minVal, stats.max[i])
+  );
+}
+
+// ─── Output Normalization & Inverse Normalization (Min-Max [0, 1]) ───
+
+/**
+ * Compute per-target minimum and maximum values from the training dataset only.
+ * Returns identity bounds [0, 1] when the dataset is empty.
+ */
+export function computeTargetMinMaxStats(
+  samples: TrainingSample[],
+  outputSize: number
+): NormalizationStats {
+  if (outputSize <= 0) {
+    return { min: [], max: [] };
+  }
+
+  if (samples.length === 0) {
+    return {
+      min: new Array(outputSize).fill(0),
+      max: new Array(outputSize).fill(1),
+    };
+  }
+
+  const min = new Array<number>(outputSize).fill(Infinity);
+  const max = new Array<number>(outputSize).fill(-Infinity);
+
+  for (const sample of samples) {
+    for (let i = 0; i < outputSize; i++) {
+      const raw = sample.targets[i] ?? 0;
+      const value = Number.isFinite(raw) ? raw : 0;
+      if (value < min[i]) min[i] = value;
+      if (value > max[i]) max[i] = value;
+    }
+  }
+
+  return { min, max };
+}
+
+/**
+ * Min-Max normalize a target vector to [0, 1] using training target bounds.
+ */
+export function normalizeTargets(
+  targets: number[],
+  stats: NormalizationStats
+): number[] {
+  return stats.min.map((minVal, i) =>
+    normalizeValue(targets[i] ?? 0, minVal, stats.max[i])
+  );
+}
+
+/**
+ * Inverse Min-Max normalization for a single value.
+ * Converts a normalized value back to the original target scale.
+ * Safely returns min when min === max (constant target).
+ */
+export function denormalizeValue(
+  normalizedValue: number,
+  min: number,
+  max: number
+): number {
+  const safeValue = Number.isFinite(normalizedValue) ? normalizedValue : 0;
+  const range = max - min;
+  if (!Number.isFinite(range) || range === 0) {
+    return Number.isFinite(min) ? min : 0;
+  }
+  return safeValue * range + min;
+}
+
+/**
+ * Inverse Min-Max normalization for an output vector.
+ */
+export function denormalizeOutputs(
+  normalizedOutputs: number[],
+  stats: NormalizationStats
+): number[] {
+  return stats.min.map((minVal, i) =>
+    denormalizeValue(normalizedOutputs[i] ?? 0, minVal, stats.max[i])
+  );
 }

@@ -1,5 +1,6 @@
 /**
- * ControlPanel — Sidebar with all interactive controls for the neural network.
+ * ControlPanel — Compact sidebar with essential training controls and
+ * collapsible architecture/hyperparameter configuration.
  */
 
 import {
@@ -14,10 +15,15 @@ import { FormsModule } from '@angular/forms';
 import {
   NetworkConfig,
   TrainingState,
-  TrainingSample,
   DisplayMode,
   ActivationFnType,
 } from '../../engine/neural-network.types';
+
+const ACTIVATION_LABELS: Record<ActivationFnType, string> = {
+  sigmoid: 'Sigmoid',
+  relu: 'ReLU',
+  tanh: 'Tanh',
+};
 
 @Component({
   selector: 'app-control-panel',
@@ -31,11 +37,9 @@ export class ControlPanelComponent {
   readonly config = input.required<NetworkConfig>();
   /** Current training state */
   readonly trainingState = input.required<TrainingState>();
-  /** Current training data */
-  readonly trainingData = input.required<TrainingSample[]>();
   /** Display mode */
   readonly displayMode = input<DisplayMode>('beginner');
-  /** Default inference input vector (updated when preset changes) */
+  /** Default inference input vector (updated when preset/dataset changes) */
   readonly defaultInferenceInput = input<number[]>([0, 0]);
 
   // Outputs
@@ -50,20 +54,35 @@ export class ControlPanelComponent {
   readonly removeLayer = output<void>();
   readonly layerSizeChange = output<{ index: number; delta: number }>();
   readonly speedChange = output<number>();
-  readonly updateTrainingData = output<TrainingSample[]>();
   readonly runInference = output<number[]>();
 
   readonly animationSpeed = signal(5);
   readonly inferenceInputs = signal<number[]>([0, 0]);
 
+  // Collapsible section states (essential sections open, secondary collapsed)
+  readonly trainingOpen = signal(true);
+  readonly trainingInfoOpen = signal(true);
+  readonly architectureOpen = signal(false);
+  readonly hyperparametersOpen = signal(false);
+
   readonly isAutoTraining = computed(() => this.trainingState().isTraining);
   readonly hiddenLayerCount = computed(() => this.config().hiddenLayers.length);
   readonly hiddenLayerSizes = computed(() => this.config().hiddenLayers);
+  readonly architectureSummary = computed(() => {
+    const cfg = this.config();
+    return [cfg.inputSize, ...cfg.hiddenLayers, cfg.outputSize].join(' -> ');
+  });
   readonly learningRate = computed(() => this.config().learningRate);
   readonly activationFn = computed(() => this.config().activationFn);
+  readonly activationLabel = computed(
+    () => ACTIVATION_LABELS[this.config().activationFn]
+  );
   readonly epoch = computed(() => this.trainingState().epoch);
   readonly currentLoss = computed(() => this.trainingState().currentLoss);
   readonly currentInputs = computed(() => this.trainingState().currentInputs);
+  readonly currentNormalizedInputs = computed(
+    () => this.trainingState().currentNormalizedInputs
+  );
   readonly currentOutputs = computed(() => this.trainingState().currentOutputs);
   readonly currentTargets = computed(() => this.trainingState().currentTargets);
 
@@ -127,39 +146,6 @@ export class ControlPanelComponent {
     const value = parseInt((event.target as HTMLInputElement).value, 10);
     this.animationSpeed.set(value);
     this.speedChange.emit(value);
-  }
-
-  // ─── Training Data Edit Handlers ───
-  onSampleChange(index: number, type: 'inputs' | 'targets', event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
-    const parsed = val
-      .split(',')
-      .map((s) => parseFloat(s.trim()))
-      .filter((n) => !isNaN(n));
-    const newData = [...this.trainingData()];
-    if (type === 'inputs') {
-      newData[index] = { ...newData[index], inputs: parsed };
-    } else {
-      newData[index] = { ...newData[index], targets: parsed };
-    }
-    this.updateTrainingData.emit(newData);
-  }
-
-  onRemoveSample(index: number): void {
-    const newData = this.trainingData().filter((_, i) => i !== index);
-    this.updateTrainingData.emit(newData);
-  }
-
-  onAddSample(): void {
-    const cfg = this.config();
-    const newData = [
-      ...this.trainingData(),
-      {
-        inputs: new Array(cfg.inputSize).fill(0),
-        targets: new Array(cfg.outputSize).fill(0),
-      },
-    ];
-    this.updateTrainingData.emit(newData);
   }
 
   // ─── Live Inference ───

@@ -78,22 +78,50 @@ export interface TrainingSample {
   targets: number[];
 }
 
+/** Per-feature Min-Max normalization statistics computed from training data */
+export interface NormalizationStats {
+  /** Minimum value per feature */
+  min: number[];
+  /** Maximum value per feature */
+  max: number[];
+}
+
+/** Result of parsing a multiline custom dataset text input */
+export interface DatasetParseResult {
+  /** Parsed training samples (non-empty only when valid) */
+  samples: TrainingSample[];
+  /** Number of input features detected per row */
+  inputCount: number;
+  /** Number of target outputs per row (1 for custom dataset format) */
+  outputCount: number;
+  /** Human-readable validation errors with line numbers */
+  errors: string[];
+  /** Whether the entire dataset is valid and ready for training */
+  isValid: boolean;
+}
+
 /** Training state tracked across steps */
 export interface TrainingState {
   /** Current epoch number */
   epoch: number;
-  /** Current loss value */
+  /** Current loss value (MSE on normalized targets) */
   currentLoss: number;
   /** History of loss values per step */
   lossHistory: number[];
   /** Whether training is currently running */
   isTraining: boolean;
-  /** Current input values */
+  /** Current original (unnormalized) input values for display */
   currentInputs: number[];
-  /** Current target values */
+  /** Current Min-Max normalized input values fed into the network */
+  currentNormalizedInputs: number[];
+  /** Current original (unnormalized) target values for display */
   currentTargets: number[];
-  /** Current output/prediction values */
+  /** Current Min-Max normalized target values used for training/loss */
+  currentNormalizedTargets: number[];
+  /** Current denormalized (original-scale) output/prediction values */
   currentOutputs: number[];
+  /** Current normalized network output activations */
+  currentNormalizedOutputs: number[];
 }
 
 /** Data for animating a single forward-pass step */

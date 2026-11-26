@@ -12,6 +12,7 @@ import {
   ConnectionState,
   TrainingState,
   TrainingSample,
+  NormalizationStats,
   ForwardPassStep,
   BackpropStep,
   ActivationFnType,
@@ -34,6 +35,11 @@ import {
   xavierInit,
   randomBias,
   gradientDescentUpdate,
+  computeMinMaxStats,
+  normalizeInputs as normalizeInputVector,
+  computeTargetMinMaxStats,
+  normalizeTargets as normalizeTargetVector,
+  denormalizeOutputs as denormalizeOutputVector,
 } from './math.utils';
 
 const MAX_LOSS_HISTORY = 600;
@@ -71,8 +77,11 @@ export class NeuralNetworkService {
     lossHistory: [],
     isTraining: false,
     currentInputs: [0, 0],
+    currentNormalizedInputs: [0, 0],
     currentTargets: [0],
+    currentNormalizedTargets: [0],
     currentOutputs: [0],
+    currentNormalizedOutputs: [0],
   });
 
   // ─── Animation Step Data ─────────────────────────────────────────
@@ -87,6 +96,16 @@ export class NeuralNetworkService {
 
   readonly totalNeurons = computed(() =>
     this.layerSizes().reduce((sum, s) => sum + s, 0)
+  );
+
+  /** Per-feature Min-Max normalization bounds computed from training inputs only */
+  readonly normalizationStats = computed<NormalizationStats>(() =>
+    computeMinMaxStats(this.trainingData(), this.config().inputSize)
+  );
+
+  /** Per-output Min-Max normalization bounds computed from training targets only */
+  readonly targetNormalizationStats = computed<NormalizationStats>(() =>
+    computeTargetMinMaxStats(this.trainingData(), this.config().outputSize)
   );
 
   /** Current sample index cycling through training data */
@@ -114,6 +133,34 @@ export class NeuralNetworkService {
     this.buildNetwork({
       ...preset.config,
       hiddenLayers: [...preset.config.hiddenLayers],
+    });
+  }
+
+  /**
+   * Load a user-defined custom dataset and rebuild the network input/output
+   * layers to match the dataset dimensions while preserving hidden layers,
+   * activation function, and learning rate.
+   */
+  loadCustomDataset(
+    samples: TrainingSample[],
+    inputSize: number,
+    outputSize: number = 1
+  ): void {
+    if (samples.length === 0 || inputSize <= 0 || outputSize <= 0) return;
+
+    this.activePresetId.set('custom');
+    const clonedData: TrainingSample[] = samples.map((s) => ({
+      inputs: Array.from({ length: inputSize }, (_, i) => s.inputs[i] ?? 0),
+      targets: Array.from({ length: outputSize }, (_, i) => s.targets[i] ?? 0),
+    }));
+    this.trainingData.set(clonedData);
+
+    const cfg = this.config();
+    this.buildNetwork({
+      ...cfg,
+      inputSize,
+      outputSize,
+      hiddenLayers: [...cfg.hiddenLayers],
     });
   }
 
@@ -186,8 +233,11 @@ export class NeuralNetworkService {
       lossHistory: [],
       isTraining: false,
       currentInputs: new Array(normalizedConfig.inputSize).fill(0),
+      currentNormalizedInputs: new Array(normalizedConfig.inputSize).fill(0),
       currentTargets: new Array(normalizedConfig.outputSize).fill(0),
+      currentNormalizedTargets: new Array(normalizedConfig.outputSize).fill(0),
       currentOutputs: new Array(normalizedConfig.outputSize).fill(0),
+      currentNormalizedOutputs: new Array(normalizedConfig.outputSize).fill(0),
     });
     this.forwardSteps.set([]);
     this.backpropSteps.set([]);
@@ -200,6 +250,33 @@ export class NeuralNetworkService {
     );
   }
 
+  // ─── Input & Output Normalization ────────────────────────────────
+
+  /**
+   * Min-Max normalize a raw input vector using the training dataset's input bounds.
+   * Never mutates or recalculates normalization parameters from inference inputs.
+   */
+  normalizeInputs(inputs: number[]): number[] {
+    return normalizeInputVector(inputs, this.normalizationStats());
+  }
+
+  /**
+   * Min-Max normalize a target vector to [0, 1] using the training dataset's target bounds.
+   */
+  normalizeTargets(targets: number[]): number[] {
+    return normalizeTargetVector(targets, this.targetNormalizationStats());
+  }
+
+  /**
+   * Convert a normalized network output vector back to the original target scale.
+   */
+  denormalizeOutputs(normalizedOutputs: number[]): number[] {
+    return denormalizeOutputVector(
+      normalizedOutputs,
+      this.targetNormalizationStats()
+    );
+  }
+
   // ─── Forward Propagation ─────────────────────────────────────────
 
   /**
@@ -207,7 +284,10 @@ export class NeuralNetworkService {
    */
   evaluateForward(net: NetworkState, inputs: number[]): number[] {
     const activationFn = getActivationFn(net.activationFn);
-    let currentActivations = net.layers[0].neurons.map((_, i) => inputs[i] ?? 0);
+    const normalizedInputs = this.normalizeInputs(inputs);
+    let currentActivations = net.layers[0].neurons.map(
+      (_, i) => normalizedInputs[i] ?? 0
+    );
 
     for (let li = 1; li < net.layers.length; li++) {
       const prevLayer = net.layers[li - 1];
@@ -240,7 +320,8 @@ export class NeuralNetworkService {
     let totalLoss = 0;
     for (const sample of data) {
       const outputs = this.evaluateForward(net, sample.inputs);
-      totalLoss += meanSquaredError(outputs, sample.targets);
+      const normalizedTargets = this.normalizeTargets(sample.targets);
+      totalLoss += meanSquaredError(outputs, normalizedTargets);
     }
     return totalLoss / data.length;
   }
@@ -252,13 +333,19 @@ export class NeuralNetworkService {
    */
   forwardPass(inputs: number[]): number[] {
     const net = this.deepCloneNetwork(this.network());
+    const inputSize = net.layers[0].neurons.length;
+    const rawInputs = Array.from(
+      { length: inputSize },
+      (_, i) => inputs[i] ?? 0
+    );
+    const normalizedInputs = this.normalizeInputs(rawInputs);
     const activationFn = getActivationFn(net.activationFn);
     const steps: ForwardPassStep[] = [];
 
-    // Set input layer activations
-    for (let i = 0; i < net.layers[0].neurons.length; i++) {
-      net.layers[0].neurons[i].activation = inputs[i] ?? 0;
-      net.layers[0].neurons[i].preActivation = inputs[i] ?? 0;
+    // Set input layer activations using Min-Max normalized values
+    for (let i = 0; i < inputSize; i++) {
+      net.layers[0].neurons[i].activation = normalizedInputs[i] ?? 0;
+      net.layers[0].neurons[i].preActivation = normalizedInputs[i] ?? 0;
     }
 
     steps.push({
@@ -308,14 +395,17 @@ export class NeuralNetworkService {
     const outputActivations = net.layers[net.layers.length - 1].neurons.map(
       (n) => n.activation
     );
+    const denormalizedOutputs = this.denormalizeOutputs(outputActivations);
 
     this.training.update((t) => ({
       ...t,
-      currentInputs: net.layers[0].neurons.map((n) => n.activation),
-      currentOutputs: [...outputActivations],
+      currentInputs: rawInputs,
+      currentNormalizedInputs: normalizedInputs,
+      currentOutputs: denormalizedOutputs,
+      currentNormalizedOutputs: [...outputActivations],
     }));
 
-    return outputActivations;
+    return denormalizedOutputs;
   }
 
   // ─── Backpropagation ─────────────────────────────────────────────
@@ -333,7 +423,8 @@ export class NeuralNetworkService {
 
     const outputLayer = net.layers[net.layers.length - 1];
     const predictions = outputLayer.neurons.map((n) => n.activation);
-    const normalizedTargets = outputLayer.neurons.map((_, i) => targets[i] ?? 0);
+    const rawTargets = outputLayer.neurons.map((_, i) => targets[i] ?? 0);
+    const normalizedTargets = this.normalizeTargets(rawTargets);
     const dLoss = mseDerivative(predictions, normalizedTargets);
 
     // ── Output layer deltas ──
@@ -431,7 +522,8 @@ export class NeuralNetworkService {
       return {
         ...t,
         currentLoss: datasetLoss,
-        currentTargets: [...normalizedTargets],
+        currentTargets: [...rawTargets],
+        currentNormalizedTargets: [...normalizedTargets],
         lossHistory: trimmedHistory,
       };
     });
@@ -613,9 +705,14 @@ export class NeuralNetworkService {
 
   /** Set input values */
   setInputs(inputs: number[]): void {
+    const rawInputs = Array.from(
+      { length: this.config().inputSize },
+      (_, i) => inputs[i] ?? 0
+    );
     this.training.update((t) => ({
       ...t,
-      currentInputs: [...inputs],
+      currentInputs: rawInputs,
+      currentNormalizedInputs: this.normalizeInputs(rawInputs),
     }));
   }
 
@@ -627,8 +724,11 @@ export class NeuralNetworkService {
       lossHistory: [],
       isTraining: false,
       currentInputs: new Array(this.config().inputSize).fill(0),
+      currentNormalizedInputs: new Array(this.config().inputSize).fill(0),
       currentTargets: new Array(this.config().outputSize).fill(0),
+      currentNormalizedTargets: new Array(this.config().outputSize).fill(0),
       currentOutputs: new Array(this.config().outputSize).fill(0),
+      currentNormalizedOutputs: new Array(this.config().outputSize).fill(0),
     });
     this.forwardSteps.set([]);
     this.backpropSteps.set([]);
