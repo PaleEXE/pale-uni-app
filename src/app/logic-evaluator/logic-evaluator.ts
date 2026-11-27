@@ -7,6 +7,7 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-logic-evaluator',
@@ -73,7 +74,7 @@ export class LogicEvaluator {
     this.conditionVars.set(newConditions);
 
     this.http
-      .post<any>('http://127.0.0.1:8000/evaluate', { expression })
+      .post<any>(`${environment.apiUrl}/evaluate`, { expression })
       .subscribe({
         next: (response) => {
           this.headers.set(response.headers);
@@ -111,7 +112,7 @@ export class LogicEvaluator {
     }
 
     this.http
-      .post<any>('http://127.0.0.1:8000/is_equivalent', {
+      .post<any>(`${environment.apiUrl}/is_equivalent`, {
         expression1: expr1,
         expression2: expr2,
       })
@@ -173,7 +174,7 @@ export class LogicEvaluator {
       }
 
       this.http
-        .post<any>('http://127.0.0.1:8000/where', {
+        .post<any>(`${environment.apiUrl}/where`, {
           expression: this.lastExp,
           conditions,
         })
@@ -222,7 +223,7 @@ export class LogicEvaluator {
       }
 
       this.http
-        .post<any>('http://127.0.0.1:8000/where', {
+        .post<any>(`${environment.apiUrl}/where`, {
           expression,
           conditions,
         })

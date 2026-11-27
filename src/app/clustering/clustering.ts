@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 import { FormsModule } from '@angular/forms';
 
 import { PageLayoutComponent } from '../components/page-layout/page-layout';
@@ -189,7 +190,7 @@ export class Clustering {
     };
 
     this.http
-      .post<ClusterResponse>('http://127.0.0.1:8000/cluster', request)
+      .post<ClusterResponse>(`${environment.apiUrl}/cluster`, request)
       .subscribe({
         next: (response) => {
           this.centroids.set(response.centroids || []);

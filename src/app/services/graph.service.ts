@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 type Point = [number, number];
 
@@ -15,6 +16,7 @@ interface GraphResponse {
   nodes: GraphNode[];
   node_count: number;
   edge_count: number;
+  image_path?: string | null;
 }
 
 interface GraphHealthResponse {
@@ -57,7 +59,7 @@ export interface LabelCorrectionResponse {
   providedIn: 'root',
 })
 export class GraphService {
-  private readonly apiUrl = 'http://localhost:8000';
+  private readonly apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 

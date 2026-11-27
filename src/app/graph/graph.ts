@@ -14,7 +14,6 @@ import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { GraphService, SavedVisualResponse } from '../services/graph.service';
 import { AuthService } from '../services/auth.service';
-import { HttpClientModule } from '@angular/common/http';
 import { ModalOverlayComponent } from '../components/modal-overlay/modal-overlay';
 import { AlertMessageComponent } from '../components/alert-message/alert-message';
 import { PageLayoutComponent } from '../components/page-layout/page-layout';
@@ -35,13 +34,11 @@ interface GraphNode {
   imports: [
     CommonModule,
     FormsModule,
-    HttpClientModule,
     ModalOverlayComponent,
     AlertMessageComponent,
     PageLayoutComponent,
     SidebarPanelComponent,
   ],
-  providers: [GraphService],
   templateUrl: './graph.html',
   styleUrl: './graph.css',
 })
@@ -836,13 +833,12 @@ export class Graph implements AfterViewInit {
         this.predictedLabels.set(predicted);
         this.correctedLabels.set({ ...predicted }); // Initialize corrected with predicted
 
-        // Extract image path from filename (user_id is in URL path)
+        // Prefer persisted storage path returned by backend (e.g. Supabase Storage)
         const user = this.authService.currentUserValue;
         if (user) {
-          // Store relative path format
           const timestamp = new Date().getTime();
           this.uploadedImagePath.set(
-            `graph_images/${user.user_id}/graph_${timestamp}`
+            response.image_path || `graph_images/${user.user_id}/graph_${timestamp}`
           );
         }
 
