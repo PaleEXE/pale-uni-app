@@ -1,0 +1,6 @@
+# Exclude local Python helper scripts and manifests from Vercel deployments
+*.py
+requirements.txt
+.angular
+dist
+node_modules
